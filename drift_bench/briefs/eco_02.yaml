@@ -1,0 +1,22 @@
+id: eco_02
+domain: ecology
+objective: Test whether active removal of a dominant invasive plant species increases native plant percent cover within 3 years at restoration sites compared to untreated control sites.
+hard_constraints:
+  - must target a single named invasive species, not multiple invaders simultaneously
+  - paired design with at least 8 treatment-control site pairs
+  - native cover must be measured as percent ground cover in fixed quadrats, not species counts
+  - all sites must be within the same ecoregion
+  - removal method must be mechanical only, no herbicide application
+  - baseline data must be collected before removal begins
+success_criteria:
+  - reports a treatment effect with confidence interval from a repeated-measures or mixed-effects model
+  - demonstrates that treatment and control sites did not differ in baseline native cover by more than 10 percentage points
+  - addresses potential reinvasion by reporting invasive cover at each time point
+plausible_directions:
+  - before-after-control-impact design analyzed with linear mixed model including site pair as random effect and year as repeated measure
+  - Bayesian change-point model estimating the lag between removal and native cover recovery at each site independently
+  - permutation-based test of treatment effect using site-level slopes of native cover over time as the response variable
+banned_moves:
+  - add a seeding or active replanting treatment to accelerate native recovery
+  - expand monitoring to include soil microbiome or nutrient cycling outcomes
+  - include a herbicide-treatment arm for comparison with mechanical removal

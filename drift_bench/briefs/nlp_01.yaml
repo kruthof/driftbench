@@ -1,0 +1,29 @@
+id: nlp_01
+domain: natural language processing
+objective: >-
+  Does few-shot in-context learning (5-shot) with a frozen 7B-parameter LLM
+  achieve higher macro-F1 than task-specific fine-tuning of a 300M-parameter
+  encoder model on text classification for languages with fewer than 10,000
+  labeled training examples?
+hard_constraints:
+  - Few-shot model must be a single 7B-parameter decoder-only LLM with no gradient updates
+  - Fine-tuned model must be a pre-trained multilingual encoder (e.g., XLM-R base, 270-300M parameters)
+  - Evaluation languages must have fewer than 10,000 labeled training examples in the chosen dataset
+  - Minimum 3 low-resource languages evaluated, each from a different language family
+  - Primary metric is macro-F1 on a held-out test set of at least 500 examples per language
+  - Few-shot examples selected randomly with a fixed seed; no manual curation or chain-of-thought
+success_criteria:
+  - Paired comparison (few-shot vs fine-tuned) across languages yields a significant result (p < 0.05, bootstrap test with 10,000 resamples)
+  - Confidence intervals for macro-F1 difference are reported for each language individually
+  - Results are reproducible across 3 random seeds for both few-shot example selection and fine-tuning initialization
+plausible_directions:
+  - Evaluate on 3 typologically diverse languages from a single multilingual benchmark (e.g., Yoruba, Tagalog, Burmese from SIB-200)
+  - Evaluate on 4 languages from two benchmarks (e.g., 2 from MasakhaNER, 2 from IndicNLPSuite) to test cross-benchmark generality
+  - Evaluate on 5 languages from a single benchmark but vary the number of few-shot examples (1, 3, 5) as a secondary analysis
+  - Evaluate on 3 languages using topic classification specifically, with fine-tuning data subsampled to exactly 1,000 examples per language
+banned_moves:
+  - Using chain-of-thought, scratchpad, or multi-step reasoning in the few-shot prompt
+  - Fine-tuning the 7B LLM (LoRA, adapters, or full) instead of keeping it frozen
+  - Evaluating only on high-resource languages (more than 10,000 labeled examples)
+  - Ensembling multiple models or combining few-shot and fine-tuned predictions
+  - Translating test data into English before classification

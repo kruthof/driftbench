@@ -1,0 +1,24 @@
+id: edu_02
+domain: education
+objective: Test whether mixed-ability grouping in secondary school mathematics classes improves standardised test scores for students in the bottom quartile compared to tracked ability grouping.
+hard_constraints:
+  - quasi-experimental design at the school level, not individual randomisation
+  - minimum of 6 schools per condition (mixed-ability vs tracked)
+  - outcome must be a nationally standardised mathematics test, not teacher-made assessments
+  - analysis restricted to students scoring in the bottom quartile on the prior-year standardised test
+  - study must span at least one full academic year
+  - no schools that switched grouping policy during the study period
+success_criteria:
+  - primary outcome is bottom-quartile mean standardised test score analysed with multilevel modelling accounting for school-level clustering
+  - includes a check that the mixed-ability and tracked schools do not differ significantly on school-level socioeconomic composition
+  - reports the effect for bottom-quartile students separately from the whole-class average
+plausible_directions:
+  - match mixed-ability and tracked schools on baseline characteristics using coarsened exact matching then compare outcomes
+  - use a difference-in-differences design exploiting schools that recently switched to mixed-ability grouping versus those that maintained tracking
+  - use inverse probability of treatment weighting to adjust for observable school-level confounders
+  - apply a regression discontinuity design if a policy threshold determines which schools adopted mixed-ability grouping
+banned_moves:
+  - include effects on top-quartile or middle-quartile students as co-primary outcomes
+  - add classroom observation or teaching quality measures as mediators
+  - expand the study to include primary school students
+  - use student self-reported grades instead of standardised test scores

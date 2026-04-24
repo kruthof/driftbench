@@ -1,0 +1,82 @@
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+.venv/
+
+# Environment / secrets
+.env
+
+# OS
+.DS_Store
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+# Data (hosted on HuggingFace: huggingface.co/datasets/kruthof/DriftBench)
+drift_bench/data/
+
+# HuggingFace staging directory
+hf_staging/
+
+# Internal working documents (not for public repo)
+analysis_report.md
+checklist.tex
+deep-research-report*.md
+experiment_documentation.md
+experiment_results.md
+hf_dataset_card.md
+hf_release_manifest.md
+idea.md
+lit-review.md
+number_verification.md
+panel_review.md
+paper_feedback.md
+paper_numbers.md
+paper_numbers_v2.md
+paper_structure.md
+pilot_analysis.md
+priority_list.md
+to_do.md
+verification_agent_A.md
+verification_agent_B.md
+verify_agent_a_v2.py
+verify_all_claims.py
+
+# Paper (under anonymous review, not for public repo)
+neurips_2026*
+literature/references.bib
+
+# Duplicate / root-level references.bib (canonical is literature/references.bib)
+references.bib
+
+# Internal scoring apps (human validation data on HuggingFace)
+scoring_app.py
+scoring_app_standalone/
+scoring_app_standalone_set2/
+
+# MTurk files
+mturk/
+
+# Literature (PDFs copyrighted, overview is internal)
+literature/
+
+# Standalone analysis script (superseded by drift_bench/run_analysis.py)
+analyze_all.py
+
+# Generated experiment configs (derived by run scripts from config.yaml)
+drift_bench/config_followup_*.yaml
+drift_bench/config_monitored.yaml
+drift_bench/config_openweight_subjects.yaml
+drift_bench/config_ow_rep2.yaml
+
+# Claude Code
+CLAUDE.md

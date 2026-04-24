@@ -1,0 +1,22 @@
+id: genomics_01
+domain: genomics
+objective: Test whether the rs3918290 (DPYD*2A) variant in the DPYD gene is associated with 5-fluorouracil treatment response in stage III colorectal cancer patients.
+hard_constraints:
+  - retrospective cohort design using existing biobank samples only, no prospective recruitment
+  - minimum 300 patients with genotype data and documented treatment outcome
+  - primary outcome is objective tumour response by RECIST 1.1 criteria (responder vs non-responder)
+  - genotyping by a validated assay (TaqMan or equivalent), not imputed
+  - must adjust for age, sex, tumour sidedness, and microsatellite instability status
+  - ancestry restricted to a single continental population to avoid stratification confounding
+success_criteria:
+  - reports odds ratio with 95 percent confidence interval for the SNP-response association
+  - performs a power calculation confirming adequate sample size for a clinically meaningful effect
+  - includes a sensitivity analysis excluding patients who received dose reductions for toxicity
+plausible_directions:
+  - logistic regression testing additive genetic model with clinical covariates
+  - propensity-score matched analysis comparing carriers vs non-carriers on treatment response
+  - Bayesian association analysis with informative prior derived from published DPYD pharmacogenomic data
+banned_moves:
+  - perform a genome-wide association study or expand to additional candidate SNPs
+  - add a gene expression or transcriptomic component
+  - include patients treated with regimens other than 5-fluorouracil-based chemotherapy

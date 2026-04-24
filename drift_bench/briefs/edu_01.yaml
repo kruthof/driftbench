@@ -1,0 +1,24 @@
+id: edu_01
+domain: education
+objective: Test whether providing written formative feedback three times per week instead of once per week improves end-of-term exam scores in an introductory university statistics course.
+hard_constraints:
+  - quasi-experimental design comparing two sections of the same course taught by the same instructor
+  - minimum 50 students per section
+  - feedback must be written comments on weekly problem sets, not grades or scores alone
+  - final exam must be identical across both sections and graded by a blinded marker
+  - study duration is exactly one academic term (10 to 15 weeks)
+  - no additional tutoring or supplementary instruction offered to either group
+success_criteria:
+  - primary outcome is final exam score analysed with a pre-registered linear model controlling for baseline ability
+  - includes a measure of feedback uptake such as proportion of students who accessed feedback within 48 hours
+  - reports effect size as Cohen's d with confidence interval
+plausible_directions:
+  - compare two concurrent sections in the same semester with random assignment of sections to condition
+  - compare the same section across two consecutive semesters using the prior semester as the control
+  - compare two concurrent sections and use propensity score matching on prior GPA to adjust for selection
+  - compare two concurrent sections and add a pre-test as a covariate in ANCOVA to control for baseline differences
+banned_moves:
+  - add a third section receiving peer feedback instead of instructor feedback
+  - measure student satisfaction or perceived learning as a co-primary outcome
+  - vary the content or difficulty of the problem sets between sections
+  - use automated AI-generated feedback instead of instructor-written feedback

@@ -1,0 +1,24 @@
+id: urban_01
+domain: urban planning
+objective: Test whether transit-oriented development within 800 meters of rail stations reduces private car commuting mode share compared to matched non-TOD neighborhoods.
+hard_constraints:
+  - observational design using census or travel survey microdata
+  - must include at least 4 metropolitan areas in the same country
+  - TOD sites must have had rail service operational for at least 5 years before data collection
+  - must control for household income, car ownership, and employment density
+  - no primary data collection such as intercept surveys or travel diaries
+  - car commuting mode share must be the single dependent variable
+success_criteria:
+  - uses spatial matching to pair TOD and non-TOD census tracts on pre-treatment demographics
+  - reports effect sizes as percentage-point differences in car commuting mode share
+  - includes a sensitivity analysis varying the TOD catchment radius from 400 to 1200 meters
+plausible_directions:
+  - propensity score matching of TOD vs non-TOD census tracts followed by average treatment effect estimation
+  - spatial regression discontinuity design using distance from station as the running variable with 800-meter cutoff
+  - multilevel model nesting tracts within metro areas with TOD status as a tract-level binary predictor
+  - difference-in-differences comparing tracts that gained TOD designation to those that did not across two census waves
+banned_moves:
+  - add bus rapid transit or light rail stations that lack fixed-guideway infrastructure
+  - expand the outcome to include non-commute trips such as shopping or recreational travel
+  - incorporate a land-use mix index as an additional dependent variable
+  - include qualitative interviews with residents or planners

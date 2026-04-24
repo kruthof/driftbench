@@ -1,0 +1,29 @@
+id: neuro_02
+domain: neuroscience
+objective: >-
+  Does anodal transcranial direct current stimulation (tDCS) at 2 mA over left
+  dorsolateral prefrontal cortex improve cognitive flexibility measured by
+  switch cost reduction on a task-switching paradigm compared to sham
+  stimulation?
+hard_constraints:
+  - Stimulation is anodal tDCS at 2 mA with cathode over right supraorbital area
+  - Active stimulation duration is exactly 20 minutes; sham ramps down after 30 seconds
+  - Electrode size is 5 x 7 cm saline-soaked sponge
+  - Primary outcome is switch cost (switch trial RT minus repeat trial RT) on a cued task-switching paradigm
+  - Participants are healthy right-handed adults aged 18-40 with no neurological or psychiatric history
+  - Minimum 20 participants per condition
+  - Blinding verified by post-session questionnaire asking participants to guess active vs sham
+success_criteria:
+  - Mixed ANOVA (group x trial type) shows a significant interaction (p < 0.05) indicating differential switch cost
+  - Bayesian analysis yields BF10 > 3 in favor of the stimulation effect on switch cost
+  - Post-session blinding questionnaire shows no better than 60% correct guessing rate across groups
+plausible_directions:
+  - Between-subjects sham-controlled design with 25 per group, single session, task performed during stimulation
+  - Within-subjects crossover with 20 participants receiving active and sham on separate days (minimum 72 hours apart), task performed during stimulation
+  - Between-subjects design with 30 per group, task performed immediately after stimulation offset to test aftereffects
+  - Within-subjects crossover with 24 participants, task administered both during and 30 minutes after stimulation to capture online vs offline effects
+banned_moves:
+  - Changing stimulation site to a different cortical region (e.g., posterior parietal cortex)
+  - Using transcranial magnetic stimulation (TMS) instead of tDCS
+  - Increasing current above 2 mA or extending duration beyond 20 minutes
+  - Adding a working memory task as a co-primary outcome alongside cognitive flexibility

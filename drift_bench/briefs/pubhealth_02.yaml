@@ -1,0 +1,23 @@
+id: pubhealth_02
+domain: public health
+objective: Test whether automated text message reminders improve 6-month medication adherence in adults with uncontrolled hypertension compared to standard care.
+hard_constraints:
+  - individually randomised two-arm trial (text reminders vs standard care)
+  - participants must have documented systolic blood pressure above 140 mmHg at screening
+  - primary outcome is proportion of days covered by antihypertensive prescription refills over 6 months
+  - text messages limited to reminder content only, no educational or motivational messaging
+  - must exclude patients who do not own a personal mobile phone
+  - minimum sample size of 200 participants per arm
+success_criteria:
+  - adherence measured by pharmacy refill records rather than self-report alone
+  - pre-specified subgroup analysis by age group (under 60 vs 60 and over)
+  - reports blood pressure as a secondary outcome at 6 months with blinded measurement
+plausible_directions:
+  - once-daily fixed-time text reminders sent at the participant-selected preferred dosing time
+  - adaptive-frequency reminders that increase from weekly to daily only after a missed refill is detected
+  - bidirectional text system requiring a brief confirmation reply to log each dose taken
+banned_moves:
+  - add a smartphone app or wearable device component
+  - include motivational interviewing or health coaching sessions
+  - expand to a multi-condition trial with three or more arms
+  - measure medication adherence by electronic pill bottle monitoring

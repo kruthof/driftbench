@@ -1,0 +1,25 @@
+id: soccomp_01
+domain: computational social science
+objective: Test whether exposure to algorithmically curated ideologically homogeneous content feeds on social media increases users' affective polarization scores over a 6-week period compared to exposure to ideologically diverse feeds.
+hard_constraints:
+  - randomized controlled experiment with exactly 2 conditions (homogeneous feed vs diverse feed)
+  - sample size between 800 and 2000 adult U.S. social media users recruited via a platform partnership or browser extension
+  - affective polarization measured using the feeling thermometer difference score (in-party minus out-party warmth) administered pre and post
+  - intervention period must last exactly 6 weeks with compliance verified by feed exposure logs
+  - participants must not be informed of which condition they are assigned to during the study
+  - single platform only, no cross-platform analysis
+  - no deception beyond standard randomized assignment; study must receive IRB approval before data collection
+success_criteria:
+  - reports the between-condition difference in pre-post affective polarization change with 95% confidence intervals
+  - includes a complier average causal effect estimate accounting for participants who did not fully comply with their assigned feed condition
+  - provides a heterogeneity analysis by at least one pre-registered moderator (party affiliation or baseline polarization)
+plausible_directions:
+  - browser extension that re-ranks participants' existing Twitter/X feed to enforce ideological homogeneity or diversity based on source-level partisan scores
+  - custom mobile app that presents a simulated social media feed drawn from real posts, with algorithmic curation controlled by the researchers
+  - partnership with a platform to randomize the feed algorithm's diversity parameter for consenting users during the study period
+  - email digest intervention delivering daily curated links from ideologically homogeneous or diverse news sources as a substitute for organic feed browsing
+banned_moves:
+  - add a survey-based measure of issue position extremity as a primary outcome alongside affective polarization
+  - include a no-intervention control group that receives their unmodified organic feed
+  - analyze behavioral outcomes such as sharing, commenting, or content creation during the study
+  - extend the study to non-U.S. populations or multiple countries

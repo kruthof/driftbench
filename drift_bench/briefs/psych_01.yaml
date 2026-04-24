@@ -1,0 +1,23 @@
+id: psych_01
+domain: social psychology
+objective: Test whether structured intergroup contact with outgroup members reduces implicit racial bias as measured by the Implicit Association Test.
+hard_constraints:
+  - randomized controlled trial with at least 2 arms
+  - sample size of at least 200 participants per arm
+  - must use the standard race IAT hosted on Project Implicit infrastructure
+  - intervention must be a single session lasting no more than 90 minutes
+  - no deception beyond standard IAT instructions
+  - follow-up measurement at exactly 2 weeks post-intervention
+success_criteria:
+  - pre-registers primary hypothesis specifying direction and minimum effect size
+  - accounts for test-retest reliability of the IAT in the power analysis
+  - includes a manipulation check confirming participants perceived the contact as intergroup
+plausible_directions:
+  - face-to-face cooperative task with an outgroup partner vs solo task control
+  - structured perspective-taking conversation with an outgroup partner vs unstructured free conversation control
+  - joint problem-solving exercise with status-equal outgroup partner vs passive exposure documentary-viewing control
+  - virtual reality shared-experience session with an outgroup avatar vs waitlist control
+banned_moves:
+  - add an explicit bias measure such as a feeling thermometer or social distance scale
+  - extend the intervention to multiple sessions or a longitudinal program
+  - include a neuroimaging or physiological arousal component

@@ -1,0 +1,24 @@
+id: pubhealth_01
+domain: public health
+objective: Test whether a school-based nutrition education programme reduces childhood obesity prevalence measured by BMI-for-age z-scores over one academic year compared to usual curriculum.
+hard_constraints:
+  - cluster-randomised design at the school level with at least 8 schools per arm
+  - participants aged 8 to 12 years at enrolment
+  - primary outcome is change in proportion of children with BMI-for-age z-score above +2 SD (WHO definition)
+  - intervention duration exactly one academic year (9 to 10 months)
+  - no provision of meals, supplements, or physical activity components beyond existing school PE
+  - budget under 200000 USD
+  - must obtain parental or guardian consent for all participants
+success_criteria:
+  - pre-registered primary analysis with intracluster correlation coefficient estimated from pilot or published data
+  - accounts for clustering in the primary analysis using mixed-effects or GEE models
+  - reports attrition by arm and performs sensitivity analysis under plausible missing-data assumptions
+plausible_directions:
+  - classroom-delivered weekly nutrition literacy lessons with standardised teacher training and fidelity checks
+  - peer-led student ambassador programme with structured take-home family engagement activities
+  - gamified digital nutrition curriculum delivered via school tablets with automated progress tracking
+banned_moves:
+  - add a physical activity or exercise intervention component
+  - include biomarker blood draws such as lipid panels or glucose measures
+  - expand the study to include adolescents above age 12
+  - combine nutrition education with school meal modification

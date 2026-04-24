@@ -1,0 +1,23 @@
+id: eco_01
+domain: ecology
+objective: Quantify whether increasing habitat fragmentation, measured as decreasing mean patch size, reduces wild bee species richness in temperate agricultural landscapes.
+hard_constraints:
+  - field sampling must occur in a single geographic region spanning no more than 200 km diameter
+  - fragmentation metric is mean patch area of semi-natural habitat within 1 km radius of each sampling site
+  - must sample at least 30 sites across a fragmentation gradient
+  - bee identification must be to species level, not morphospecies
+  - sampling protocol must use pan traps or netting, not both combined
+  - no sites within protected nature reserves
+success_criteria:
+  - reports a species-area or species-fragmentation regression with effect size and confidence interval
+  - accounts for sampling effort differences across sites using rarefaction or coverage-based estimation
+  - tests whether landscape-level crop diversity confounds the fragmentation effect
+plausible_directions:
+  - space-for-time substitution comparing bee richness across sites binned by patch size quartiles using generalized linear models
+  - hierarchical distance sampling that jointly estimates detection probability and richness as functions of fragmentation
+  - multi-scale analysis comparing fragmentation effects measured at 500 m, 1 km, and 2 km buffer radii using AIC model selection
+  - structural equation model decomposing fragmentation into patch-size and isolation components with separate paths to richness
+banned_moves:
+  - add a pollen-transport or pollination-service experiment to link diversity to function
+  - expand taxonomic scope to include hoverflies or butterflies as additional pollinator groups
+  - incorporate eDNA metabarcoding as a detection method

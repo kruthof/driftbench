@@ -1,0 +1,23 @@
+id: cogsci_02
+domain: cognitive psychology
+objective: Test whether dual-task interference on a primary visual working memory task is larger when the concurrent secondary task is visual rather than auditory, holding secondary-task difficulty constant.
+hard_constraints:
+  - within-subjects design with exactly 3 conditions (single-task baseline, visual dual-task, auditory dual-task)
+  - sample size between 40 and 80 participants
+  - secondary tasks must be matched on standalone accuracy within 5 percentage points via pilot calibration
+  - primary task must use a change-detection paradigm with set size 4
+  - no neuroimaging or physiological measures
+  - experiment must be completable in a single session under 90 minutes
+success_criteria:
+  - primary outcome is change-detection sensitivity (d-prime) compared across the three conditions
+  - reports a planned contrast testing visual-dual minus auditory-dual interference difference
+  - includes an exclusion criterion for participants performing below chance on any single condition
+plausible_directions:
+  - use a storage-demanding visual secondary task (spatial array memorization) to compete for working memory maintenance resources
+  - use a processing-demanding visual secondary task (rapid visual search with response selection) to compete for executive control resources
+  - use a sustained-attention visual secondary task (continuous monitoring of a peripheral flicker target) to compete for attentional vigilance resources
+  - use a dual-component secondary task combining brief storage and speeded processing to simultaneously tax maintenance and control resources
+banned_moves:
+  - add a cross-modal (audiovisual) secondary task condition
+  - vary the set size of the primary task across blocks
+  - include an individual-differences analysis correlating working memory capacity with interference magnitude

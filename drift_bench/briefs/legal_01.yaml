@@ -1,0 +1,24 @@
+id: legal_01
+domain: environmental law and policy
+objective: Test whether mandatory corporate environmental disclosure laws enacted between 2005 and 2018 causally reduce facility-level environmental violations within 5 years of enactment compared to non-adopting jurisdictions.
+hard_constraints:
+  - quasi-experimental difference-in-differences design only, no randomization
+  - treatment defined as passage of a state or national mandatory environmental disclosure statute, not voluntary reporting frameworks
+  - outcome must be measured using official regulatory enforcement records (e.g., EPA ECHO), not self-reported compliance
+  - sample must include at least 3 treated jurisdictions and at least 3 control jurisdictions
+  - analysis window must span exactly 5 years pre-enactment and 5 years post-enactment
+  - must include facility-level fixed effects and year fixed effects
+  - no lobbying expenditure data or political variables as controls
+success_criteria:
+  - reports a difference-in-differences coefficient with clustered standard errors at the jurisdiction level
+  - includes at least one falsification test using a placebo enactment date
+  - demonstrates parallel trends assumption holds in the pre-treatment period with a visual and statistical test
+plausible_directions:
+  - staggered adoption design using Callaway-Sant'Anna estimator across U.S. states that adopted disclosure mandates at different times
+  - two-group canonical DiD comparing facilities in EU member states subject to the 2014 Non-Financial Reporting Directive against matched facilities in non-EU OECD countries
+  - staggered multi-jurisdiction synthetic control method constructing a separate synthetic counterfactual for each treated jurisdiction and averaging the treatment effects across all treated units
+banned_moves:
+  - add a firm-level ESG score as an outcome or mediator
+  - include analysis of stock price or financial performance effects of disclosure
+  - extend the outcome to include occupational safety violations alongside environmental violations
+  - use text analysis or NLP on disclosure report contents

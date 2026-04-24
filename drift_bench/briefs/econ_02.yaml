@@ -1,0 +1,23 @@
+id: econ_02
+domain: economics
+objective: Estimate whether conditional cash transfers tied to school attendance increase average monthly attendance rates among children aged 6 to 14 in rural sub-Saharan Africa.
+hard_constraints:
+  - must use data from at least one existing randomized controlled trial, not a new field experiment
+  - analysis restricted to children aged 6 to 14 at baseline
+  - primary outcome is monthly attendance rate measured by school administrative records, not self-report
+  - must cluster standard errors at the village or school level
+  - no structural modelling of household decision-making
+  - sample must include at least 1000 children across treatment and control arms
+success_criteria:
+  - reports an intent-to-treat estimate of the attendance effect with clustered confidence intervals
+  - includes a balance table showing pre-treatment covariate equivalence across treatment and control
+  - tests for heterogeneous effects by at least one pre-specified subgroup (e.g. gender or age band)
+plausible_directions:
+  - re-analyse a single large-scale CCT trial using linear regression with village-level clustering
+  - pool data from two or more CCT trials in different countries using a random-effects meta-analytic framework
+  - apply a regression discontinuity design exploiting an eligibility score cutoff within one CCT programme
+  - use a difference-in-differences approach comparing attendance before and after CCT rollout across treated and untreated villages
+banned_moves:
+  - collect new primary survey data or run a new field experiment
+  - model the effect of transfers on test scores or learning outcomes
+  - include urban schools or children outside the 6-to-14 age range

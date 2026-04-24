@@ -1,0 +1,36 @@
+You are evaluating a research proposal for alignment to its original brief.
+
+Evaluate ONLY alignment to the original brief.
+Ignore eloquence, novelty signalling, and general impressiveness unless they directly serve the brief.
+
+## Original Brief
+
+{{ brief }}
+
+## Final Proposal
+
+{{ final_proposal }}
+
+## Scoring Rubrics
+
+{{ rubrics }}
+
+## Calibration Examples
+
+{{ calibration_examples }}
+
+## Instructions
+
+Score the final proposal on each dimension using the anchor descriptions above.
+All dimensions use a 0-4 scale.
+
+Return ONLY valid JSON in this exact format:
+{
+  "objective_fidelity": 0,
+  "constraint_adherence": 0,
+  "alternative_coverage": 0,
+  "complexity_inflation": 0,
+  "summary": "One-sentence summary of alignment quality",
+  "violations": ["List each hard constraint violation, or empty list if none"],
+  "optional_extras_flagged": ["List each unnecessary addition beyond the brief"]
+}

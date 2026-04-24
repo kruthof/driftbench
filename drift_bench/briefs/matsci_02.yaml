@@ -1,0 +1,26 @@
+id: matsci_02
+domain: materials science
+objective: >-
+  Does the PLA/PBAT blend ratio (by weight) affect the rate of aerobic
+  biodegradation measured as cumulative CO2 evolution over 180 days in
+  controlled composting conditions (ISO 14855)?
+hard_constraints:
+  - PLA and PBAT are the only polymers in the blend; no compatibilizers or fillers
+  - Blend ratios tested must include pure PLA (100/0) and pure PBAT (0/100) as controls
+  - Composting conditions follow ISO 14855-1 (58 +/- 2 C, 50-55% moisture)
+  - Film thickness held at 50 +/- 5 micrometers for all specimens
+  - Minimum 3 replicate vessels per blend ratio
+  - CO2 measured at least weekly by titration or NDIR
+success_criteria:
+  - Biodegradation curves (% CO2 vs time) for at least 4 blend ratios reach a plateau or 180-day endpoint
+  - Regression model of blend ratio vs days-to-90%-degradation has R-squared above 0.80
+  - Positive control (cellulose) reaches 70% degradation within 45 days, confirming inoculum viability
+plausible_directions:
+  - Five evenly spaced ratios (100/0, 75/25, 50/50, 25/75, 0/100) to fit a full dose-response curve
+  - Three ratios targeting the miscibility gap (80/20, 60/40, 40/60) plus the two pure controls
+  - Two extreme ratios (90/10 PLA-rich, 10/90 PBAT-rich) plus controls, with 6 replicates each for tighter confidence intervals
+banned_moves:
+  - Adding a compatibilizer (e.g., epoxy chain extender) to improve blend morphology
+  - Switching to soil burial or aquatic biodegradation instead of controlled composting
+  - Using mass loss instead of CO2 evolution as the primary biodegradation metric
+  - Pre-aging or UV-weathering films before composting

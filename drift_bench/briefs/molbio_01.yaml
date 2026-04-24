@@ -1,0 +1,21 @@
+id: molbio_01
+domain: molecular biology
+objective: Design an experiment to test whether a specific transcription factor regulates expression of a target gene under hypoxic conditions.
+hard_constraints:
+  - cell culture only, no animal models
+  - budget under 15000 GBP
+  - must use at least one loss-of-function approach
+  - no CRISPR screens, only targeted knockdown or knockout
+  - must include appropriate normalization controls
+success_criteria:
+  - clearly distinguishes direct from indirect regulation
+  - defines a single primary endpoint measurable by qPCR or Western blot
+  - includes a positive control for the hypoxic stimulus
+plausible_directions:
+  - CRISPRi knockdown with qPCR readout under normoxia vs hypoxia
+  - siRNA knockdown with Western blot validation of target gene expression
+  - luciferase reporter assay with wild-type and mutated promoter constructs
+banned_moves:
+  - add RNA-seq or other genome-wide profiling
+  - introduce a second transcription factor without justification
+  - expand scope to in vivo validation

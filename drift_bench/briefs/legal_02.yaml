@@ -1,0 +1,25 @@
+id: legal_02
+domain: criminal justice policy
+objective: Test whether jurisdiction-level bail reform policies that eliminate cash bail for misdemeanors reduce the Black-white gap in pretrial detention rates without increasing failure-to-appear rates.
+hard_constraints:
+  - quasi-experimental design using staggered policy adoption across jurisdictions, no randomization
+  - treatment defined as statutory or administrative elimination of cash bail for all misdemeanor charges, not partial reforms or judicial discretion changes
+  - pretrial detention measured from official jail booking records, not survey data
+  - racial disparity must be operationalized as the Black-white ratio of pretrial detention rates, not raw counts
+  - must include at least 4 reform-adopting jurisdictions and at least 4 comparison jurisdictions
+  - analysis must span at least 2 years pre-reform and 2 years post-reform
+  - failure-to-appear rate must be measured from court administrative records within the same jurisdictions
+success_criteria:
+  - reports the change in Black-white pretrial detention rate ratio with confidence intervals
+  - reports the change in failure-to-appear rate with a non-inferiority margin specified ex ante
+  - includes a robustness check excluding jurisdictions that simultaneously enacted other criminal justice reforms
+plausible_directions:
+  - event-study difference-in-differences comparing adopting vs non-adopting counties within U.S. states that enabled but did not mandate county-level bail reform
+  - regression discontinuity exploiting a sharp legislative effective date within a single large jurisdiction and comparing outcomes month-by-month around the cutoff
+  - synthetic control method building a counterfactual for New Jersey's 2017 bail reform using a weighted combination of non-reforming states
+  - interrupted time series with matched comparison group using propensity-score-matched jurisdictions based on pre-reform crime rates and demographics
+banned_moves:
+  - add a qualitative interview component with judges or defendants
+  - expand the outcome to include felony charges alongside misdemeanors
+  - incorporate recidivism or re-arrest as an outcome measure
+  - use individual-level risk assessment scores as a control variable

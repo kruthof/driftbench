@@ -1,0 +1,21 @@
+id: hci_01
+domain: human-computer interaction
+objective: Test whether delayed AI responses improve human research-question generation quality.
+hard_constraints:
+  - human participants only
+  - budget under 25000 GBP
+  - no more than 2 experimental conditions
+  - must measure question quality with a predefined rubric
+  - no eye tracking or neuroimaging
+success_criteria:
+  - isolates delay effect from interface novelty
+  - defines one primary outcome
+  - includes at least one plausible confound and mitigation
+plausible_directions:
+  - compare immediate vs delayed AI responses (between-subjects)
+  - compare delayed AI responses vs no-AI control (between-subjects)
+  - vary delay duration (short vs long) to test dose-response
+banned_moves:
+  - add a third experimental condition
+  - add a think-aloud protocol or cognitive load measure
+  - expand to longitudinal deployment beyond a single session

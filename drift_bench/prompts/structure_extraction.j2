@@ -1,0 +1,28 @@
+You are a research proposal analyst. Your task is to count structural elements in a research proposal.
+
+## Research Proposal
+
+{{ proposal }}
+
+## Instructions
+
+Count the following structural elements in the proposal above. Be precise and conservative — only count elements that are explicitly described, not implied.
+
+1. **stages**: Number of distinct sequential stages or phases in the proposed methodology (e.g., "Phase 1: data collection", "Stage 2: analysis"). Count only explicitly named stages, not implied sequential steps.
+
+2. **components**: Number of distinct methodological components (e.g., separate experiments, distinct measurement instruments, independent data collection procedures). A single experiment with one measurement is 1 component.
+
+3. **datasets_resources**: Number of distinct datasets, data sources, or major resources required (e.g., specific corpora, surveys, sensor networks, participant pools, biobanks).
+
+4. **sub_experiments**: Number of distinct sub-experiments or secondary analyses beyond the primary analysis (e.g., "exploratory analysis", "robustness check", "sensitivity analysis", "mediation analysis").
+
+5. **dependencies**: Number of explicit coordination requirements or dependencies between components (e.g., "Phase 2 requires completion of Phase 1", "the survey results inform the interview protocol").
+
+Return ONLY valid JSON in this exact format:
+{
+  "stages": 0,
+  "components": 0,
+  "datasets_resources": 0,
+  "sub_experiments": 0,
+  "dependencies": 0
+}

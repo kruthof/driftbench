@@ -1,0 +1,24 @@
+id: energy_02
+domain: energy systems
+objective: Assess whether enrollment in community solar programs reduces the energy cost burden disparity between low-income and median-income households within participating utilities.
+hard_constraints:
+  - must compare at least 3 utilities that offer community solar with at least 3 that do not
+  - energy cost burden defined as annual electricity expenditure divided by annual household income
+  - low-income defined as households below 80% of area median income
+  - must use utility billing data or American Community Survey microdata, not self-reported survey responses
+  - analysis must cover at least 2 full calendar years of post-enrollment data
+  - exclude utilities where community solar enrollment is below 2% of residential accounts
+success_criteria:
+  - reports the change in the low-income-to-median-income energy burden ratio with a confidence interval
+  - demonstrates robustness to the income threshold definition by repeating analysis at 60% and 100% of area median income
+  - controls for electricity price variation across utilities
+plausible_directions:
+  - triple-difference model comparing burden gaps between income groups, between community-solar and non-community-solar utilities, before and after program launch
+  - instrumental variable approach using state renewable portfolio standard mandates as an instrument for community solar availability
+  - matched utility-pair analysis selecting non-community-solar utilities on pre-period burden ratios and rate structures then comparing post-period trajectories
+  - quantile regression estimating treatment effects at different points of the energy burden distribution rather than at the mean
+banned_moves:
+  - add rooftop solar adoption as a parallel treatment channel
+  - expand to include heating fuel or natural gas costs in the burden calculation
+  - incorporate qualitative interviews with program participants
+  - include non-residential accounts in the analysis

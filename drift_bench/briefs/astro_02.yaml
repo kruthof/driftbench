@@ -1,0 +1,23 @@
+id: astro_02
+domain: astrophysics
+objective: Test whether weak gravitational lensing mass estimates for a sample of galaxy clusters systematically differ from X-ray hydrostatic mass estimates by more than 20 percent.
+hard_constraints:
+  - sample restricted to clusters at redshift 0.1 to 0.5 with both weak lensing and X-ray data available
+  - minimum sample size of 30 clusters
+  - weak lensing masses derived from shear profile fitting assuming an NFW density profile
+  - X-ray masses derived from Chandra or XMM-Newton hydrostatic equilibrium analysis only
+  - must use a consistent overdensity radius definition (R500) for both mass estimates
+  - no inclusion of Sunyaev-Zeldovich effect mass proxies
+success_criteria:
+  - quantifies the mass bias as the median ratio of weak lensing mass to X-ray mass with bootstrap confidence intervals
+  - tests for dependence of the mass bias on cluster redshift and mass using a linear regression
+  - accounts for Eddington bias and selection effects in the cluster sample
+plausible_directions:
+  - direct pairwise comparison of published weak lensing and X-ray masses from overlapping survey catalogues
+  - hierarchical Bayesian model jointly fitting the lensing shear profiles and X-ray temperature profiles with shared mass parameters
+  - Monte Carlo forward simulation of the selection function and measurement errors to infer the intrinsic mass bias distribution
+banned_moves:
+  - add dynamical mass estimates from galaxy velocity dispersions as a third mass proxy
+  - include clusters below redshift 0.1 where weak lensing signal-to-noise is poor
+  - replace the NFW profile with a free-form non-parametric mass reconstruction
+  - incorporate strong lensing constraints from cluster cores

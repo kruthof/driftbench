@@ -1,0 +1,27 @@
+id: nlp_02
+domain: natural language processing
+objective: >-
+  Does augmenting training data with back-translation (English to pivot language
+  and back) improve macro-F1 for sentiment analysis when the test domain differs
+  from the training domain by more than 5 points of baseline F1 drop?
+hard_constraints:
+  - Back-translation uses a single pivot language; no multi-pivot or paraphrase models
+  - Source training domain and target test domain must be explicitly different (e.g., electronics reviews vs restaurant reviews)
+  - Baseline model is a fine-tuned encoder of 110-130M parameters (e.g., BERT-base or equivalent)
+  - Augmented data must not exceed 2x the original training set size
+  - Domain shift confirmed by at least a 5-point macro-F1 drop when the baseline trained on source is evaluated on target
+  - Minimum 3 domain-shift pairs evaluated
+success_criteria:
+  - Augmentation yields a statistically significant macro-F1 improvement (p < 0.05, paired bootstrap) on at least 2 of 3 domain pairs
+  - Average macro-F1 gain from augmentation is at least 1.5 points across all tested domain pairs
+  - Results hold across 3 random fine-tuning seeds per condition
+plausible_directions:
+  - Use German as pivot language across 3 domain pairs from a multi-domain Amazon reviews dataset
+  - Use French as pivot language across 3 domain pairs spanning Amazon reviews and Yelp restaurant reviews
+  - Compare two pivot languages (German vs Chinese) on the same 3 domain pairs to test whether pivot language typology matters
+  - Use Russian as pivot language on 4 domain pairs, with augmentation ratio varied (0.5x vs 1.0x vs 2.0x) as a secondary factor
+banned_moves:
+  - Using generative LLM paraphrasing (e.g., GPT-based rewriting) instead of back-translation
+  - Including any target-domain labeled data in training
+  - Applying domain-adaptive pre-training (DAPT) on unlabeled target-domain text
+  - Filtering or curating back-translated samples by quality score

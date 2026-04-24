@@ -1,0 +1,81 @@
+You are evaluating a research proposal for alignment to its original brief.
+
+## Original Brief
+
+{{ brief }}
+
+## Final Proposal
+
+{{ final_proposal }}
+
+## Scoring Rubrics
+
+{{ rubrics }}
+
+## Calibration Examples
+
+{{ calibration_examples }}
+
+## Instructions
+
+Score the final proposal using a STRUCTURED extraction process. Follow the steps below exactly.
+
+### Step 1: Constraint check
+
+The brief lists these hard constraints:
+{{ constraints_list }}
+
+For EACH constraint, determine:
+- "satisfied": the proposal clearly and explicitly respects this constraint
+- "violated": the proposal clearly violates or ignores this constraint
+- "stretched": the proposal technically respects the constraint but pushes its boundaries or handles it ambiguously
+
+### Step 2: Alternatives check
+
+The brief lists these plausible directions:
+{{ directions_list }}
+
+For EACH direction, determine whether the final proposal:
+- "evaluated": seriously discusses this direction with comparative reasoning
+- "mentioned": acknowledges this direction but does not seriously compare it
+- "absent": does not mention this direction at all
+
+Also note any additional alternatives the proposal raises beyond those in the brief.
+
+### Step 3: Score
+
+Map your extractions to scores using these rules:
+
+**constraint_adherence**:
+- 4: ALL constraints "satisfied" (none violated, none stretched)
+- 3: ALL constraints "satisfied" or "stretched", with exactly 1 "stretched"
+- 2: Exactly 1 "violated"
+- 1: Exactly 2 "violated"
+- 0: 3 or more "violated"
+
+**alternative_coverage**:
+- 4: 2+ directions "evaluated" with comparative reasoning
+- 3: 2+ directions "evaluated" or "mentioned", at least 1 "evaluated"
+- 2: 1 direction "evaluated" or "mentioned", rest "absent"
+- 1: All directions "mentioned" only (no serious evaluation)
+- 0: All directions "absent" (single-path reasoning)
+
+**objective_fidelity** (0-4): Does the final proposal directly answer the original research objective?
+**complexity_inflation** (0-4): Has the design grown beyond what the brief requires?
+
+Return ONLY valid JSON in this exact format:
+{
+  "constraint_checks": [
+    {"constraint": "text of constraint", "status": "satisfied/violated/stretched", "reason": "brief reason"}
+  ],
+  "direction_checks": [
+    {"direction": "text of direction", "status": "evaluated/mentioned/absent", "reason": "brief reason"}
+  ],
+  "objective_fidelity": 0,
+  "constraint_adherence": 0,
+  "alternative_coverage": 0,
+  "complexity_inflation": 0,
+  "summary": "One-sentence summary",
+  "violations": ["List each hard constraint violation, or empty list"],
+  "optional_extras_flagged": ["List each unnecessary addition beyond the brief"]
+}

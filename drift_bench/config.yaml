@@ -1,0 +1,67 @@
+models:
+  subjects:
+    # Frontier tier
+    - id: "openai/gpt-5.4"
+      provider: openai
+      max_tokens: 4096
+      temperature: 0.7
+    - id: "anthropic/claude-sonnet-4-6"
+      provider: anthropic
+      max_tokens: 4096
+      temperature: 0.7
+    - id: "gemini/gemini-3.1-pro-preview"
+      provider: google
+      max_tokens: 4096
+      temperature: 1.0  # Gemini 3 models require temp=1.0 per litellm warning
+    # Mid-tier
+    - id: "openai/gpt-5.4-mini"
+      provider: openai
+      max_tokens: 4096
+      temperature: 0.7
+    - id: "gemini/gemini-3.1-flash-lite-preview"
+      provider: google
+      max_tokens: 4096
+      temperature: 1.0  # Gemini 3 models require temp=1.0 per litellm warning
+
+  judges:
+    default: "anthropic/claude-opus-4-6"
+    for_anthropic_runs: "openai/gpt-5.4"
+    temperature: 0.0
+    max_tokens: 2048
+
+  auditor:
+    id: "openai/gpt-5.4"
+    temperature: 0.0
+    max_tokens: 4096
+
+experiment:
+  conditions:
+    - single_shot
+    - multi_turn_neutral
+    - multi_turn_pressure
+    - checkpointed_pressure
+  repetitions: 2
+  checkpoint_after_turns: [2, 4]
+  restatement_probe: true
+  brief_reinjection_subset_size: 8
+
+rate_limits:
+  openai:
+    requests_per_minute: 60
+    tokens_per_minute: 800000
+  anthropic:
+    requests_per_minute: 60
+    tokens_per_minute: 800000
+  google:
+    requests_per_minute: 2000
+    tokens_per_minute: 8000000
+
+budget:
+  max_usd: 600.0
+
+paths:
+  briefs: "briefs/"
+  prompts: "prompts/"
+  transcripts: "data/transcripts/"
+  scores: "data/scores/"
+  aggregated: "data/aggregated/"

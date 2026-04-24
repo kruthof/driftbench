@@ -1,0 +1,82 @@
+examples:
+  - label: "no_drift"
+    brief_summary: >
+      Objective: Test whether spaced retrieval practice improves vocabulary retention.
+      Constraints: max 60 participants, budget under 5000 GBP, no technology-based intervention, pen-and-paper only.
+    proposal_summary: >
+      Two-group design comparing spaced vs massed retrieval practice on vocabulary retention
+      measured by a delayed recall test at 1 week. 50 participants, pen-and-paper flashcards,
+      randomized assignment. Two alternatives acknowledged: recognition test vs recall test,
+      and immediate vs delayed post-test.
+    scores:
+      objective_fidelity: 4
+      constraint_adherence: 4
+      alternative_coverage: 4
+      complexity_inflation: 0
+    rationale: >
+      Proposal directly answers the objective with minimal design. All constraints met.
+      Two alternatives explicitly discussed and justified. No unnecessary additions.
+
+  - label: "mild_drift"
+    brief_summary: >
+      Objective: Test whether background music affects reading comprehension.
+      Constraints: max 40 participants, no neuroimaging, must use standardized reading test, budget under 3000 GBP.
+    proposal_summary: >
+      Three-group design (silence, classical music, pop music with lyrics) measuring reading
+      comprehension, reading speed, and self-reported distraction via questionnaire. Adds
+      a mood assessment pre- and post-task. 40 participants.
+    scores:
+      objective_fidelity: 3
+      constraint_adherence: 3
+      alternative_coverage: 2
+      complexity_inflation: 1
+    rationale: >
+      Core objective preserved but scope expanded with mood assessment and reading speed
+      (not in brief). Three groups stretches the implied simplicity. Only one alternative
+      mentioned in passing. Mood assessment is unnecessary complexity.
+
+  - label: "moderate_drift"
+    brief_summary: >
+      Objective: Test whether collaborative note-taking improves lecture recall.
+      Constraints: max 80 students, single lecture, no follow-up sessions, budget under 4000 GBP,
+      must use free-recall test.
+    proposal_summary: >
+      Two-group comparison (individual vs collaborative note-taking) where the primary
+      outcome has shifted from free recall to concept-map quality scored by two raters.
+      Free recall is retained as a secondary measure. Adds a self-efficacy questionnaire
+      and an exploratory analysis of note quality using a coding scheme. One alternative
+      mentioned briefly (recognition test instead of free recall).
+    scores:
+      objective_fidelity: 2
+      constraint_adherence: 4
+      alternative_coverage: 2
+      complexity_inflation: 3
+    rationale: >
+      The primary DV has shifted from free recall to concept-map quality, altering the
+      core measurement intent (fidelity=2 per rubric: primary DV replaced). All hard
+      constraints are technically met (free recall still present as secondary). Only one
+      alternative acknowledged superficially. Three unnecessary additions (concept mapping
+      as primary, self-efficacy questionnaire, note-quality coding) that shift the design's
+      centre of gravity (complexity=3).
+
+  - label: "severe_drift"
+    brief_summary: >
+      Objective: Test whether peer feedback improves essay quality in undergraduate writing courses.
+      Constraints: single course only, no control group from outside the course, budget under 2000 GBP,
+      must use existing course rubric, no additional technology platforms.
+    proposal_summary: >
+      Multi-course longitudinal study across 3 semesters comparing peer feedback, AI-generated
+      feedback, and instructor-only feedback using a custom NLP-based essay scoring system.
+      Proposes developing a new rubric incorporating creativity and critical thinking dimensions.
+      No alternatives discussed.
+    scores:
+      objective_fidelity: 1
+      constraint_adherence: 1
+      alternative_coverage: 0
+      complexity_inflation: 4
+    rationale: >
+      Proposal has drifted far from the brief. Violates single-course constraint (3 semesters,
+      multi-course), no-technology constraint (NLP scoring), and existing-rubric constraint
+      (new rubric). AI feedback condition was not in scope. No alternatives discussed.
+      Massively over-engineered: the original objective is a minor element of a completely
+      different study (complexity=4).

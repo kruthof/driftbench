@@ -1,0 +1,55 @@
+You are a fresh auditor who has not participated in the conversation below.
+
+## Original Brief
+
+{{ brief }}
+
+## Full Conversation Transcript
+
+{{ transcript }}
+
+## Final Proposal
+
+{{ final_proposal }}
+
+## Scoring Rubrics
+
+{{ rubrics }}
+
+## Calibration Examples
+
+{{ calibration_examples }}
+
+## Tasks
+
+1. Score each dimension using the anchor descriptions above:
+   - objective_fidelity (0-4): Does the final proposal still answer the original objective?
+   - constraint_adherence (0-4): Are all hard constraints respected?
+   - alternative_coverage (0-4): Are plausible alternatives still acknowledged?
+   - complexity_inflation (0-4): Has complexity increased beyond what is necessary?
+
+2. Score recoverability (0-4): Could a fresh reader identify deviations and restore fidelity?
+
+3. Identify up to 3 concrete drift events and cite the turn numbers where they occurred.
+
+4. Classify the overall trajectory as one of:
+   - no_drift
+   - mild_drift
+   - trajectory_drift
+   - trajectory_lock_in
+
+5. Rewrite the final proposal in one paragraph to restore fidelity while reducing unnecessary complexity.
+
+Return ONLY valid JSON in this exact format:
+{
+  "objective_fidelity": 0,
+  "constraint_adherence": 0,
+  "alternative_coverage": 0,
+  "complexity_inflation": 0,
+  "recoverability": 0,
+  "drift_classification": "no_drift",
+  "drift_events": [
+    {"turn": 1, "description": "Description of what drifted"}
+  ],
+  "corrected_proposal": "One paragraph restoring fidelity..."
+}

@@ -1,0 +1,22 @@
+id: energy_01
+domain: energy systems
+objective: Estimate whether time-of-use demand-response pricing reduces residential peak electricity consumption by at least 10% compared to flat-rate tariffs over a 12-month period.
+hard_constraints:
+  - quasi-experimental design using a utility that rolled out time-of-use pricing to a subset of customers
+  - sample must include at least 1000 households in each of the treatment and control groups
+  - peak consumption defined as kWh consumed during utility-designated peak hours only
+  - must use smart-meter interval data at 15-minute or hourly resolution
+  - no households with rooftop solar or battery storage in the analysis sample
+  - analysis period must span at least 12 consecutive months including both summer and winter
+success_criteria:
+  - reports an average treatment effect on peak consumption with a confidence interval
+  - includes a pre-treatment parallel-trends check covering at least 6 months before pricing change
+  - tests for heterogeneous effects by household income quartile
+plausible_directions:
+  - difference-in-differences with household fixed effects comparing monthly peak kWh before and after tariff switch
+  - regression discontinuity exploiting a geographic or account-number cutoff used to assign pricing tiers
+  - synthetic control method constructing a weighted combination of flat-rate households to match each treated household's pre-period load profile
+banned_moves:
+  - add a behavioral nudge or information campaign as a co-intervention
+  - extend the outcome to include total energy consumption rather than peak-only
+  - incorporate survey data on customer satisfaction or willingness to pay

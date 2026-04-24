@@ -1,0 +1,22 @@
+id: epi_01
+domain: epidemiology
+objective: Determine whether long-term ambient PM2.5 exposure is associated with increased childhood asthma incidence after adjusting for socioeconomic and indoor-environment confounders.
+hard_constraints:
+  - retrospective cohort design only, no randomization of exposure
+  - exposure metric must be annual-average PM2.5 at residential address, not self-reported
+  - cohort must include at least 5000 children aged 0-12
+  - must use ICD-coded asthma diagnoses, not survey-reported symptoms
+  - must adjust for at least household income and parental smoking status
+  - no proprietary air-quality datasets; only publicly available EPA AQS or equivalent
+success_criteria:
+  - reports an adjusted hazard ratio or incidence rate ratio with 95% confidence interval
+  - demonstrates that results are robust in at least one sensitivity analysis that modifies the exposure window definition
+  - pre-specifies the primary model before running any analysis
+plausible_directions:
+  - Cox proportional hazards model with time-varying PM2.5 exposure assigned from nearest EPA monitor
+  - distributed-lag nonlinear model linking annual PM2.5 from satellite-derived estimates to asthma onset
+  - matched cohort design pairing children in high-PM2.5 ZIP codes with children in low-PM2.5 ZIP codes using propensity scores
+banned_moves:
+  - add an indoor air-quality monitoring component to the study
+  - expand the outcome to include all respiratory conditions rather than asthma specifically
+  - incorporate genetic or biomarker data to explore biologic mechanisms

@@ -1,0 +1,23 @@
+id: astro_01
+domain: astrophysics
+objective: Test whether the near-infrared transit spectrum of the hot Jupiter WASP-39b shows a water absorption feature at 1.4 microns that is distinguishable from a flat featureless spectrum at 3-sigma significance.
+hard_constraints:
+  - analysis restricted to HST WFC3 G141 grism archival data only, no JWST data
+  - must use at least 2 independent transit observations to assess repeatability
+  - spectral extraction must apply a consistent wavelength-dependent limb-darkening model
+  - systematics detrending limited to parametric models (polynomial or exponential ramp), no Gaussian processes
+  - must report transit depth precision per spectral bin of 50 ppm or better
+  - no use of ground-based photometry or spectroscopy as supplementary data
+success_criteria:
+  - compares a water-bearing atmospheric model against a flat-line null model using Bayesian model comparison (delta BIC or Bayes factor)
+  - reports per-bin transit depth spectrum with 1-sigma error bars across the 1.1 to 1.7 micron range
+  - performs injection-recovery tests to quantify sensitivity to a water feature of the expected amplitude
+plausible_directions:
+  - forward-model grid comparison fitting pre-computed transmission spectra at varying water abundances to the extracted spectrum
+  - divide-white approach with common-mode systematics correction followed by per-bin spectroscopic light curve fitting
+  - differential spectrophotometry using a comparison star in the same WFC3 field to remove shared instrumental trends
+banned_moves:
+  - include JWST NIRISS or NIRSpec data to extend wavelength coverage
+  - fit for additional molecular species such as sodium, potassium, or carbon dioxide
+  - apply free-retrieval atmospheric modelling with more than 3 free parameters
+  - use data from a different exoplanet as a validation case

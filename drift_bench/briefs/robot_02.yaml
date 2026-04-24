@@ -1,0 +1,26 @@
+id: robot_02
+domain: robot navigation
+objective: Test whether augmenting a reinforcement-learning navigation policy with 50 human teleoperation demonstrations reduces collision rate in cluttered indoor environments compared to the same RL policy trained without any demonstration data.
+hard_constraints:
+  - evaluation environment must contain at least 15 movable obstacles per 25 square meters of floor space
+  - exactly 50 human teleoperation demonstrations provided to the demonstration-augmented condition
+  - both conditions must use the same RL algorithm and reward function
+  - robot platform must be a differential-drive mobile base with a 2D lidar and RGB-D camera, no additional sensors
+  - evaluation consists of at least 100 point-to-point navigation trials across at least 5 distinct room layouts
+  - maximum episode length of 120 seconds per trial, timeout counts as failure
+  - no map or prior occupancy grid provided to the robot at test time
+  - agent must not build or use an occupancy map during evaluation episodes
+success_criteria:
+  - reports collision rate and success rate with standard errors across all evaluation trials
+  - reports mean time-to-goal for successful trials with a statistical comparison between conditions
+  - includes a learning curve showing evaluation performance vs training steps for both conditions
+plausible_directions:
+  - pre-train the policy with behavioral cloning on demonstrations then fine-tune with PPO in the cluttered environment
+  - use demonstrations as a replay buffer for offline-to-online RL with an IQL-style algorithm and no pre-training phase
+  - shape the RL reward using a discriminator trained on demonstrations via GAIL, with no direct behavioral cloning
+  - initialize the policy network weights from a demonstration-trained inverse model and continue with on-policy RL
+banned_moves:
+  - use a classical planner (RRT, A*) as a baseline or hybrid component
+  - add a privileged state estimator that provides obstacle positions not available through onboard sensors
+  - increase the number of demonstrations beyond 50 in any experimental condition
+  - evaluate in open or outdoor environments rather than cluttered indoor spaces

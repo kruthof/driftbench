@@ -1,0 +1,23 @@
+id: agri_01
+domain: agricultural science
+objective: Test whether winter cover cropping increases soil organic carbon stocks in the 0-30 cm depth relative to bare fallow over a 3-year rotation cycle.
+hard_constraints:
+  - field trial on working farms, not research station plots
+  - minimum of 8 paired sites across at least 2 soil texture classes
+  - must measure soil organic carbon by dry combustion, not loss-on-ignition
+  - budget under 50000 GBP
+  - no irrigation differences permitted between treatment and control plots
+  - cover crop species must be a single legume or single grass, not a mixture
+success_criteria:
+  - reports carbon stocks on an equivalent soil mass basis to correct for bulk density changes
+  - includes baseline soil carbon measurements taken before the first cover crop planting
+  - accounts for spatial variability within fields using geo-referenced sampling points
+plausible_directions:
+  - paired-plot design comparing winter cereal rye cover crop vs bare fallow with annual soil cores
+  - paired-plot design comparing crimson clover cover crop vs bare fallow with annual soil cores
+  - on-farm strip trial using farmer-managed cover crop strips vs adjacent fallow strips with composite sampling at rotation midpoint and endpoint
+banned_moves:
+  - add a cover crop mixture treatment combining legume and grass species
+  - expand measurements to include greenhouse gas flux or nitrous oxide emissions
+  - incorporate a tillage variable as an additional experimental factor
+  - extend the trial beyond the specified 3-year rotation cycle

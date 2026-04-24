@@ -1,0 +1,23 @@
+id: robot_01
+domain: robotics and manipulation
+objective: Test whether sim-to-real transfer with domain randomization achieves higher grasp success rate on novel household objects than fine-tuning a simulation-pretrained policy on 500 or fewer real-world grasps.
+hard_constraints:
+  - evaluation on exactly 30 previously unseen household objects not present in any training or randomization set
+  - both methods must start from the same base policy architecture and simulation-pretrained weights
+  - real-world fine-tuning budget capped at 500 grasp attempts total
+  - domain randomization must vary at least texture, lighting, object mass, and friction parameters
+  - robot hardware must be a single 6-DOF or 7-DOF arm with a parallel-jaw gripper, no suction or dexterous hands
+  - grasp success defined as lifting the object at least 10 cm above the table and holding for 3 seconds
+  - each test object must be evaluated with at least 10 grasp attempts per method
+success_criteria:
+  - reports per-method grasp success rate with 95% confidence intervals across the 30 test objects
+  - includes a breakdown of success rate by object difficulty category (small, medium, large) with at least 8 objects per category
+plausible_directions:
+  - train domain-randomized policy entirely in Isaac Gym with automatic domain parameter sampling and deploy zero-shot to a Franka Panda arm
+  - use NVIDIA Omniverse for photorealistic rendering-based domain randomization and deploy to a UR5e arm via a learned residual policy
+  - implement dynamics randomization only (no visual randomization) in MuJoCo and compare against fine-tuning with DAgger on real robot data
+banned_moves:
+  - add a third method or hybrid that combines domain randomization and real-world fine-tuning
+  - use a learned grasp quality estimator (e.g., GQ-CNN) as the base policy architecture
+  - expand the test set to include deformable or articulated objects
+  - collect more than 500 real-world grasps for the fine-tuning condition

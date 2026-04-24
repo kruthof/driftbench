@@ -1,0 +1,28 @@
+id: neuro_01
+domain: neuroscience
+objective: >-
+  Does 36 hours of total sleep deprivation impair working memory updating
+  accuracy on an N-back task (2-back and 3-back) relative to a rested control
+  group in healthy adults aged 18-35?
+hard_constraints:
+  - Participants must be healthy adults aged 18-35 with no diagnosed sleep disorders
+  - Sleep deprivation condition is exactly 36 hours of continuous wakefulness verified by wrist actigraphy
+  - Control group sleeps 7-9 hours the night before testing, confirmed by actigraphy
+  - Primary outcome is d-prime on 2-back and 3-back conditions; reaction time is secondary only
+  - Minimum 20 participants per group (sleep-deprived vs rested)
+  - No caffeine, alcohol, or stimulant use permitted in the 24 hours before testing
+  - Testing session occurs between 08:00 and 10:00 to control circadian phase
+success_criteria:
+  - Between-group comparison (independent t-test or Mann-Whitney) shows p < 0.05 for d-prime on at least one N-back level
+  - Cohen's d for the sleep-deprived vs rested comparison exceeds 0.5 on the 3-back condition
+  - Actigraphy compliance rate is at least 90% across all enrolled participants
+plausible_directions:
+  - Between-subjects design with 25 participants per arm, single testing session post-deprivation
+  - Within-subjects crossover design with 20 participants tested once rested and once sleep-deprived, separated by a 2-week washout
+  - Between-subjects design with 30 per arm, adding a 24-hour partial deprivation group as a dose-response midpoint
+  - Within-subjects design with 20 participants and an additional delayed retest 12 hours post-recovery sleep
+banned_moves:
+  - Administering modafinil, caffeine, or any pharmacological countermeasure during deprivation
+  - Replacing the N-back task with a different working memory paradigm (e.g., Sternberg, change detection)
+  - Using self-reported sleep logs instead of actigraphy for sleep verification
+  - Adding emotional stimuli to the N-back to study affective modulation

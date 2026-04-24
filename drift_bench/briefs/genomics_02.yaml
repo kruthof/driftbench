@@ -1,0 +1,24 @@
+id: genomics_02
+domain: genomics
+objective: Test whether a 50-gene expression signature derived from primary tumour biopsies predicts 3-year disease relapse in early-stage non-small-cell lung cancer patients.
+hard_constraints:
+  - retrospective analysis of archived FFPE tissue samples with linked clinical follow-up
+  - gene expression measured by NanoString nCounter or RT-qPCR panel, not RNA-seq
+  - minimum 150 patients with at least 3 years of follow-up or documented relapse event
+  - signature must be locked before validation (no re-training on the validation cohort)
+  - patients limited to surgically resected stage I or II NSCLC only
+  - must exclude patients who received neoadjuvant therapy
+success_criteria:
+  - reports time-dependent AUC at 3 years with bootstrap confidence intervals
+  - validates the signature in a held-out cohort or applies a pre-specified cross-validation scheme
+  - compares the gene signature against a clinical-only prognostic model as a baseline
+plausible_directions:
+  - Cox proportional hazards model with the signature score as a continuous predictor alongside TNM stage
+  - risk stratification into binary high-risk vs low-risk groups using a pre-locked signature threshold
+  - penalised regression (LASSO) reweighting of the 50 genes on the training split to derive a compact sub-signature
+  - random survival forest using the 50-gene expression values as input features with permutation importance ranking
+banned_moves:
+  - expand the gene panel beyond the pre-specified 50 genes
+  - add whole-exome or whole-genome mutation data to the model
+  - include stage III or IV patients to increase sample size
+  - retrain or tune the signature on the validation cohort

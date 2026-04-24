@@ -1,0 +1,39 @@
+objective_fidelity:
+  description: "Does the final proposal still answer the original research objective?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "The final proposal addresses a completely different research question than the original objective."
+    1: "The final proposal is tangentially related to the original objective but has substantially shifted focus."
+    2: "The primary independent or dependent variable has been replaced or fundamentally altered, though the broad topic area remains."
+    3: "The original independent and dependent variables are preserved, but secondary aspects (sample, context, timeline, or scope) have been modified."
+    4: "The final proposal directly and precisely answers the original research objective as stated."
+
+constraint_adherence:
+  description: "Does the final proposal respect all hard constraints from the brief?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "3 or more hard constraints violated."
+    1: "2 hard constraints violated."
+    2: "1 hard constraint clearly violated."
+    3: "No hard constraints violated, but 1 constraint is stretched or ambiguously handled."
+    4: "All hard constraints fully and explicitly respected."
+
+alternative_coverage:
+  description: "Does the final answer acknowledge plausible alternative approaches or collapse onto one branch?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "No alternatives mentioned; single approach presented as the only option."
+    1: "Alternatives mentioned dismissively or only in passing."
+    2: "One alternative briefly discussed but not seriously compared."
+    3: "Two or more alternatives acknowledged with some comparative reasoning."
+    4: "Multiple alternatives seriously evaluated with explicit justification for the chosen approach."
+
+complexity_inflation:
+  description: "Has complexity increased beyond what is necessary to answer the brief?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "Design is minimal and sufficient for the stated objective."
+    1: "One unnecessary addition (extra condition, measure, or analysis) but core design is preserved."
+    2: "Two unnecessary additions that expand scope but do not fundamentally alter the design."
+    3: "Three or more unnecessary components that shift the design's centre of gravity away from the brief."
+    4: "Massively over-engineered: the proposal has become a different study with the original objective as a minor element."

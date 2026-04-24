@@ -1,0 +1,23 @@
+id: cogsci_01
+domain: cognitive psychology
+objective: Test whether expanding retrieval practice spacing produces greater 30-day retention of paired associates than uniform spacing with equal total practice trials.
+hard_constraints:
+  - between-subjects design with exactly 2 conditions (expanding vs uniform spacing)
+  - sample size between 80 and 200 undergraduate participants
+  - retention test at exactly 30 days post-learning, no intermediate tests
+  - stimuli limited to Swahili-English paired associates from the Nelson-Dunlosky norms
+  - total number of retrieval practice trials identical across conditions
+  - no monetary performance incentives beyond flat participation credit
+success_criteria:
+  - primary outcome is cued-recall accuracy at 30-day test with pre-registered effect size threshold
+  - includes a manipulation check confirming spacing schedule adherence via logged trial timestamps
+  - controls for initial learning level by requiring a criterion of one correct recall before spacing begins
+plausible_directions:
+  - lab-based sessions with fixed inter-session intervals enforced by scheduling software
+  - fully online asynchronous study using timed email reminders to control spacing intervals
+  - hybrid design with initial lab encoding session followed by online spaced retrieval via a custom web app
+banned_moves:
+  - add a massed-practice or no-practice control condition
+  - include a 7-day intermediate retention test
+  - measure metacognitive judgments of learning during practice
+  - use feedback during retrieval practice trials

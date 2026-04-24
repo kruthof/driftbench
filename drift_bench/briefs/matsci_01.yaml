@@ -1,0 +1,27 @@
+id: matsci_01
+domain: materials science
+objective: >-
+  Does annealing temperature in the 400-800 C range affect grain boundary
+  fracture toughness in AA7075-T6 aluminium alloy, measured via chevron-notch
+  short-bar testing?
+hard_constraints:
+  - Use only AA7075-T6 aluminium alloy from a single supplier lot
+  - Annealing hold time fixed at 2 hours for every specimen
+  - Minimum 5 specimens per temperature condition
+  - Grain boundary toughness measured exclusively by chevron-notch short-bar (ASTM E1304)
+  - All specimens solution-treated at 480 C for 1 hour before annealing
+  - Testing performed at 23 +/- 2 C ambient temperature
+success_criteria:
+  - Statistical test (ANOVA, alpha=0.05) rejects the null hypothesis that mean fracture toughness is equal across at least 4 annealing temperatures
+  - Effect size (eta-squared) for annealing temperature exceeds 0.14
+  - Fractographic SEM images confirm grain-boundary-dominated fracture path in at least 80% of specimens
+plausible_directions:
+  - Coarse sweep of 4 equally spaced temperatures (450, 550, 650, 750 C) to map the full response curve
+  - Focused bracket around the known precipitate dissolution window (470-530 C) with 15 C increments
+  - Two-temperature extreme comparison (400 C vs 800 C) with doubled specimen count for maximum statistical power
+  - Three temperatures chosen at phase-boundary transitions predicted by CALPHAD equilibrium diagrams
+banned_moves:
+  - Adding alloying elements or coatings to modify grain boundary chemistry
+  - Varying hold time across conditions (confounds the temperature variable)
+  - Using nanoindentation hardness as a proxy for fracture toughness
+  - Introducing controlled pre-strain or cold work before annealing

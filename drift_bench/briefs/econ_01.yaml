@@ -1,0 +1,24 @@
+id: econ_01
+domain: economics
+objective: Estimate the causal effect of a 10-percent minimum wage increase on employment rates among workers aged 16 to 24 using variation across US states.
+hard_constraints:
+  - use only publicly available data from the Bureau of Labor Statistics and Census Bureau
+  - analysis window must be 2015-2023 inclusive
+  - unit of analysis is state-quarter, not individual workers
+  - must include state and quarter fixed effects
+  - sample restricted to the 50 US states plus DC, no territories
+  - no instrumental variable approaches
+success_criteria:
+  - identifies at least one pre-trend test or placebo check supporting the parallel trends assumption
+  - reports both the point estimate and a 95-percent confidence interval for the employment effect
+  - includes a robustness check using an alternative age bracket (e.g. 16-19 instead of 16-24)
+plausible_directions:
+  - canonical two-way fixed effects difference-in-differences comparing states that raised their minimum wage to those that did not
+  - stacked difference-in-differences with cohort-specific treatment timing to address staggered adoption bias
+  - synthetic control method constructing a weighted counterfactual for each treated state from untreated donor states
+  - event-study design with Borusyak-Jaravel-Spiess imputation estimator to handle heterogeneous treatment timing across states
+banned_moves:
+  - add a structural general equilibrium model to simulate welfare effects
+  - include labour force participation or hours worked as a co-primary outcome
+  - extend the analysis to workers over age 24
+  - use proprietary payroll data from private firms

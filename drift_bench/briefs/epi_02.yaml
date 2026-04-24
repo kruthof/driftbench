@@ -1,0 +1,22 @@
+id: epi_02
+domain: epidemiology
+objective: Test whether county-level vaccine hesitancy rates measured pre-season predict the peak weekly incidence of measles outbreaks in US counties during 2018-2023.
+hard_constraints:
+  - ecologic study at the county level, not individual-level data
+  - vaccine hesitancy must be operationalized from a single pre-existing survey source, not a composite index
+  - outcome must be peak weekly case count per 100000 population, not cumulative count
+  - must include at least 20 counties with one or more confirmed measles cases
+  - must control for county population density and median household income
+  - no counties with fewer than 10000 residents
+success_criteria:
+  - reports a regression coefficient for hesitancy with a confidence interval and p-value
+  - includes a falsification test using a non-vaccine-preventable disease as a negative control outcome
+plausible_directions:
+  - negative binomial regression of peak weekly incidence on pre-season hesitancy rate with demographic covariates
+  - two-stage least squares approach instrumenting hesitancy with state-level exemption-policy strictness
+  - geographically weighted regression allowing the hesitancy-outbreak association to vary spatially
+  - Bayesian hierarchical model with state-level random intercepts pooling information across counties
+banned_moves:
+  - add an agent-based transmission simulation to project counterfactual outbreak sizes
+  - expand to include COVID-19 or influenza vaccine hesitancy
+  - incorporate social-media sentiment analysis as a hesitancy proxy

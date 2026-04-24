@@ -1,0 +1,23 @@
+id: finance_02
+domain: financial economics
+objective: Test whether high-frequency trading activity increases intraday volatility in mid-cap equities.
+hard_constraints:
+  - must use publicly available TAQ or equivalent exchange-level data
+  - sample restricted to mid-cap stocks (market cap between 2 and 10 billion USD)
+  - must measure volatility using realized variance computed from 5-minute log returns, aggregated to a daily measure
+  - analysis must cover at least 12 consecutive months
+  - no proprietary order-flow or broker-level data
+  - must control for market-wide volatility using a benchmark index
+success_criteria:
+  - isolates HFT contribution to volatility from correlated market microstructure factors
+  - defines a clear identification strategy for HFT activity using public data proxies
+  - includes robustness check with alternative volatility estimator
+plausible_directions:
+  - regression of realized variance on odd-lot trade ratio as HFT proxy with stock and day fixed effects
+  - instrumental variable approach using exchange co-location fee changes as exogenous HFT shocks
+  - difference-in-differences around SEC tick size pilot program comparing treated vs control stocks
+banned_moves:
+  - add a sentiment analysis component using news or social media
+  - expand scope to include large-cap or small-cap stocks
+  - incorporate limit order book depth as an additional dependent variable
+  - add an event study around flash crash episodes

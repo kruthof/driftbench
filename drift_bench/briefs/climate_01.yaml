@@ -1,0 +1,21 @@
+id: climate_01
+domain: climate science
+objective: Assess whether urban green infrastructure reduces local surface temperature more effectively than high-albedo roofing in mid-latitude cities.
+hard_constraints:
+  - observational study only, no randomized assignment of interventions to sites
+  - must use publicly available remote sensing data
+  - budget under 10000 GBP
+  - analysis must cover at least 3 cities
+  - no proprietary climate model runs
+success_criteria:
+  - controls for confounding variables such as building density and elevation
+  - defines a clear primary outcome metric for surface temperature reduction
+  - includes sensitivity analysis for data quality and spatial resolution
+plausible_directions:
+  - satellite-based land surface temperature comparison across matched urban parcels
+  - difference-in-differences analysis using before-and-after green infrastructure installation
+  - spatial regression with green cover fraction and albedo as competing predictors
+banned_moves:
+  - add a climate simulation component
+  - include a tropical city for geographic diversity
+  - expand scope to include indoor temperature or energy consumption

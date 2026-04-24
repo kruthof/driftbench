@@ -1,0 +1,22 @@
+id: soccomp_02
+domain: computational social science
+objective: Test whether algorithmic content curation on social media platforms reduces the diversity of news sources that users engage with compared to reverse-chronological feeds.
+hard_constraints:
+  - observational study only, no platform-side A/B test access
+  - must use publicly available or researcher-accessible API data
+  - sample must include at least 5000 unique user accounts
+  - analysis window must not exceed 6 months
+  - must operationalize source diversity using Shannon entropy or equivalent information-theoretic metric
+  - no survey or self-report data
+success_criteria:
+  - accounts for user self-selection into algorithmically curated vs chronological feeds
+  - defines a single primary diversity metric before analysis begins
+  - includes a falsification test showing the metric detects known diversity differences
+plausible_directions:
+  - natural experiment exploiting a platform default-feed switch with regression discontinuity on source entropy before vs after the change
+  - matched-pair comparison of users who opt into chronological feeds vs those who remain on algorithmic feeds using propensity score matching
+  - instrumental variable approach using device type or app version as an instrument for feed algorithm exposure
+banned_moves:
+  - add sentiment analysis or toxicity scoring of consumed content
+  - expand scope to include non-news content such as entertainment or lifestyle posts
+  - introduce a content-level topic model to characterize article similarity

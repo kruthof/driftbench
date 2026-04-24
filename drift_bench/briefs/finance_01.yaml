@@ -1,0 +1,23 @@
+id: finance_01
+domain: financial economics
+objective: Test whether mandatory ESG disclosure requirements reduce the cost of equity capital for affected firms.
+hard_constraints:
+  - must use publicly available stock market and filing data only
+  - event study or difference-in-differences design only
+  - sample must include at least 200 firms
+  - estimation window must not overlap with the 2008 financial crisis
+  - cost of equity must be estimated using an implied cost of capital model, not CAPM beta
+  - analysis period must not exceed 10 years
+success_criteria:
+  - cleanly identifies the causal effect of disclosure mandate separate from voluntary adoption
+  - defines a single primary outcome variable
+  - addresses potential confounding from concurrent regulatory changes
+plausible_directions:
+  - difference-in-differences around EU Non-Financial Reporting Directive using matched treated vs exempt firms
+  - event study around SEC climate disclosure rule using size-based compliance thresholds
+  - staggered DiD across multiple countries with different adoption dates using Callaway-Sant'Anna estimator
+banned_moves:
+  - add an ESG rating or score as a mediating variable
+  - expand to include bond markets or credit spreads
+  - add a textual analysis component to measure disclosure quality
+  - include firms from the financial sector
