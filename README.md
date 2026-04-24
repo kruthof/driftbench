@@ -145,3 +145,18 @@ python -m drift_bench.pipeline [OPTIONS]
 --skip-scoring         Run subjects only (no judge/auditor)
 ```
 
+## Citation
+
+```bibtex
+@misc{driftbench2026,
+  title={Models Recall What They Violate: Trajectory Drift in Multi-Turn LLM Ideation},
+  author={Anonymous},
+  year={2026},
+  url={https://huggingface.co/datasets/kruthof/DriftBench}
+}
+```
+
+## License
+
+CC-BY-4.0
+
