@@ -152,7 +152,7 @@ python -m drift_bench.pipeline [OPTIONS]
   title={Models Recall What They Violate: Trajectory Drift in Multi-Turn LLM Ideation},
   author={Anonymous},
   year={2026},
-  url={https://huggingface.co/datasets/driftbench/DriftBench}
+  url={}
 }
 ```
 
