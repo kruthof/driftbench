@@ -117,7 +117,7 @@ The manifest reports:
 - human-validation completion status without exposing raw rater identities
 - hashes for key config, manuscript, and analysis files
 
-Human-validation protocol and data are available in the [HuggingFace dataset](https://huggingface.co/datasets/kruthof/DriftBench).
+Human-validation protocol and data are available in the [HuggingFace dataset](https://huggingface.co/datasets/driftbench/DriftBench).
 
 ## Pipeline Features
 
@@ -152,7 +152,7 @@ python -m drift_bench.pipeline [OPTIONS]
   title={Models Recall What They Violate: Trajectory Drift in Multi-Turn LLM Ideation},
   author={Anonymous},
   year={2026},
-  url={https://huggingface.co/datasets/kruthof/DriftBench}
+  url={https://huggingface.co/datasets/driftbench/DriftBench}
 }
 ```
 
