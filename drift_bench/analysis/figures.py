@@ -101,41 +101,41 @@ def fig_main_scores(df: pd.DataFrame, output_path: Path) -> None:
 
 
 def fig_drift_classification(df: pd.DataFrame, output_path: Path) -> None:
-    """Stacked bar chart of drift classification proportions by condition."""
-    summary = compute_drift_classification_summary(df)
-    if summary.empty:
-        return
+    """Bar chart: constraint non-compliance rate by condition.
 
-    agg = summary.groupby(["condition", "a_drift_classification"])["count"].sum().reset_index()
-    totals = agg.groupby("condition")["count"].sum().reset_index(name="total")
-    agg = agg.merge(totals, on="condition")
-    agg["proportion"] = agg["count"] / agg["total"]
-
-    drift_classes = ["no_drift", "mild_drift", "trajectory_drift", "trajectory_lock_in"]
-    colors = ["#2ecc71", "#f1c40f", "#e67e22", "#e74c3c"]
-
-    present_conditions = [c for c in CONDITION_ORDER if c in agg["condition"].values]
+    Non-compliance = constraint adherence < 4 (any hard constraint
+    stretched or violated). For multi-turn conditions with probes,
+    this equals the KBV rate for 6/7 models (all with 100% recall).
+    """
+    present_conditions = [c for c in CONDITION_ORDER if c in df["condition"].values]
     fig, ax = plt.subplots(figsize=(8, 5))
-    x = range(len(present_conditions))
-    bottom = [0.0] * len(present_conditions)
+    x = np.arange(len(present_conditions))
 
-    for cls, color in zip(drift_classes, colors):
-        heights = []
-        for cond in present_conditions:
-            row = agg[(agg["condition"] == cond) & (agg["a_drift_classification"] == cls)]
-            heights.append(row["proportion"].values[0] if len(row) > 0 else 0.0)
-        ax.bar(
-            x, heights, bottom=bottom,
-            label=cls.replace("_", " ").title(),
-            color=color, edgecolor="black", linewidth=0.5,
-        )
-        bottom = [b + h for b, h in zip(bottom, heights)]
+    rates = []
+    for cond in present_conditions:
+        subset = df[df["condition"] == cond]
+        rate = (subset["j_constraint_adherence"] < 4).mean() * 100
+        rates.append(rate)
 
+    bars = ax.bar(x, rates, 0.6, color="#3498db", edgecolor="black", linewidth=0.5)
+
+    for bar in bars:
+        h = bar.get_height()
+        if h > 1:
+            ax.text(bar.get_x() + bar.get_width()/2., h + 1,
+                    f"{h:.0f}%", ha="center", va="bottom", fontsize=11, fontweight="bold")
+
+    cond_labels = {
+        "single_shot": "Single-shot",
+        "multi_turn_neutral": "Neutral",
+        "multi_turn_pressure": "Pressure",
+        "checkpointed_pressure": "Checkpointed",
+    }
     ax.set_xticks(x)
-    ax.set_xticklabels([CONDITION_LABELS.get(c, c) for c in present_conditions], fontsize=9)
-    ax.set_ylabel("Proportion")
-    ax.set_title("Drift Classification by Condition")
-    ax.legend(loc="upper right")
+    ax.set_xticklabels([cond_labels.get(c, c) for c in present_conditions], fontsize=10)
+    ax.set_ylabel("Non-compliance Rate (%)")
+    ax.set_title("Constraint Non-compliance by Condition (adherence < 4)")
+    ax.set_ylim(0, 65)
 
     fig.tight_layout()
     fig.savefig(output_path, bbox_inches="tight")
