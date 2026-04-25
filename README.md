@@ -149,7 +149,7 @@ python -m drift_bench.pipeline [OPTIONS]
 
 ```bibtex
 @misc{driftbench2026,
-  title={Models Recall What They Violate: Trajectory Drift in Multi-Turn LLM Ideation},
+  title={Models Recall What They Violate: Constraint Adherence in Multi-Turn LLM Ideation},
   author={Anonymous},
   year={2026},
   url={}
