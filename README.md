@@ -1,6 +1,6 @@
-# DriftBench: Trajectory Drift in Multi-Turn LLM-Assisted Scientific Ideation
+# DriftBench: Constraint Adherence in Multi-Turn LLM Ideation
 
-A benchmark and evaluation protocol for measuring **trajectory drift** — the process-level failure mode where LLMs become increasingly detailed and locally coherent while progressively losing fidelity to the original research objective, constraints, or alternative lines of inquiry during multi-turn interaction.
+
 
 ## Quick Start
 
