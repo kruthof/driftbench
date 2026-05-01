@@ -5,29 +5,27 @@ __pycache__/
 dist/
 .venv/
 
-# Environment / secrets
-.env
-
-# OS
+# OS / editor
 .DS_Store
+.idea/
+.vscode/
 
-# LaTeX build artifacts
-*.aux
-*.bbl
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.synctex.gz
+# API keys / secrets
+.env
+.env.*
 
-# Data (hosted on HuggingFace: huggingface.co/datasets/kruthof/DriftBench)
+# Large data lives on HuggingFace, not git.
 drift_bench/data/
 
-# HuggingFace staging directory
+# HuggingFace staging — published separately on HF.
+Dataset/
 hf_staging/
 
-# Internal working documents (not for public repo)
+# Local anonymization config (contains identifying strings being filtered).
+# A scrubbed `.anonymize.example.json` is tracked.
+.anonymize.json
+
+# Internal planning / drafts / review notes (not for public repo)
 analysis_report.md
 checklist.tex
 deep-research-report*.md
@@ -51,14 +49,38 @@ verification_agent_B.md
 verify_agent_a_v2.py
 verify_all_claims.py
 
-# Paper (under anonymous review, not for public repo)
+# Paper drafts (under anonymous review, not for public repo)
 neurips_2026*
+arxiv/
+paper/different_paper/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+paper/**/*.aux
+paper/**/*.log
+paper/**/*.fls
+paper/**/*.fdb_latexmk
+paper/**/*.synctex.gz
+paper/**/*.blg
+paper/**/*.bbl
+paper/**/*.out
+
+# Third-party / copyrighted material (e.g. cached arXiv PDFs, scraped HTML)
+*.pdf
+*.html
+
+# Duplicate / root-level references.bib (canonical lives elsewhere)
+references.bib
 literature/references.bib
 
-# Duplicate / root-level references.bib (canonical is literature/references.bib)
-references.bib
-
-# Internal scoring apps (human validation data on HuggingFace)
+# Internal scoring apps (human validation data is on HuggingFace)
 scoring_app.py
 scoring_app_standalone/
 scoring_app_standalone_set2/
@@ -78,5 +100,9 @@ drift_bench/config_monitored.yaml
 drift_bench/config_openweight_subjects.yaml
 drift_bench/config_ow_rep2.yaml
 
+# Croissant metadata (regenerated from manifest)
+croissant.json
+
 # Claude Code
 CLAUDE.md
+.claude/

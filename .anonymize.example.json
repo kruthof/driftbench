@@ -1,0 +1,21 @@
+{
+  "_README": [
+    "Tracked example. The real config lives at .anonymize.json (gitignored).",
+    "rater_replacements: per-file {real_id: anon_id} maps applied during build.",
+    "forbidden_substrings: build_dataset_release.py fails if any of these strings appears in a file under Dataset/."
+  ],
+  "rater_replacements": {
+    "human_rater_set1_rater_A.json": {},
+    "human_rater_set1_rater_B.json": {},
+    "human_rater_set1_rater_C.json": {},
+    "human_rater_set2_rater_A.json": {},
+    "human_rater_set2_rater_C.json": {},
+    "human_rater_set2_rater_D.json": {}
+  },
+  "forbidden_substrings": [
+    "yourrealfirstname",
+    "yourreallastname",
+    "yourgithubhandle",
+    "yourpersonalwebsite.tld"
+  ]
+}
