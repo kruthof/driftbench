@@ -32,12 +32,72 @@ Other reproduction modes:
 ```bash
 bash scripts/reproduce.sh --aggregate   # re-aggregate locally-staged JSONL into parquet
 bash scripts/reproduce.sh --analyze     # aggregate + run all priority-list analyses + figures
-bash scripts/reproduce.sh --full        # full pipeline incl. subjects/judges (costs API budget)
+bash scripts/reproduce.sh --full        # full pipeline incl. subjects/judges (uses your API quota)
 ```
 
 ---
 
-## Running the full pipeline from scratch (costs API budget)
+## Evaluating your own model on DriftBench
+
+`scripts/evaluate_model.py` scores any [litellm](https://docs.litellm.ai/)-compatible
+subject model on the published 38 briefs × 4 conditions, using the same
+cross-family judge + auditor as the paper. No edits to `config.yaml` are
+required — the script clones the base config, swaps in your model, adds a
+default rate-limit entry for its provider, runs the pipeline, aggregates the
+scores, and prints a comparison against the published 7-model baseline.
+
+```bash
+# Hosted API (e.g. OpenAI, Anthropic, Gemini)
+export OPENAI_API_KEY="sk-..."
+python scripts/evaluate_model.py --model openai/gpt-4o --max-budget <usd>
+
+# Open-weight via Together.ai
+export TOGETHER_API_KEY="..."
+python scripts/evaluate_model.py \
+  --model "together_ai/Qwen/Qwen2.5-72B-Instruct-Turbo" \
+  --max-budget <usd>
+
+# Smoke test on one condition first
+python scripts/evaluate_model.py \
+  --model openai/gpt-4o \
+  --conditions single_shot \
+  --repetitions 1 \
+  --max-budget <usd>
+```
+
+Outputs land at `drift_bench/data/external/<model-slug>/`:
+
+```
+drift_bench/data/external/openai_gpt-4o/
+├── transcripts/                # one JSONL per (brief, condition, rep)
+├── scores/                     # judge_*.jsonl + auditor_*.jsonl per run
+├── aggregated/all_scores.parquet   # merged judge + auditor table
+└── run_summary.json
+```
+
+The script prints a per-condition comparison vs the published benchmark,
+e.g.:
+
+```
+=== openai/gpt-4o per-condition mean scores ===
+                          n  obj_fid  constr_adh  alt_cov  cplx_inf  drift_rate
+condition
+single_shot              38    3.842       3.711    3.158     0.421       0.158
+multi_turn_neutral       38    3.789       3.658    3.184     0.789       0.184
+multi_turn_pressure      38    3.605       3.211    3.421     1.842       0.421
+checkpointed_pressure    38    3.737       3.421    3.526     1.605       0.342
+
+=== Published benchmark baseline (mean over all 7 models) ===
+...
+```
+
+Re-running the same command resumes — existing transcripts and scores are
+detected on disk and skipped. To re-score with a different judge, point
+`drift_bench/judges/judge.py` at a different judge id and re-run.
+
+---
+
+## Running the full published pipeline from scratch
 
 ```bash
 source .venv/bin/activate
@@ -45,15 +105,15 @@ export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 export GEMINI_API_KEY="AI..."
 
-# Minimal pilot (1 model, single-shot, $5 budget)
+# Minimal pilot (1 model, single-shot only) — pass --max-budget to cap API spend
 python -m drift_bench.pipeline \
   --conditions single_shot \
   --models openai/gpt-5.4 \
   --repetitions 1 \
-  --max-budget 5
+  --max-budget <usd>
 
-# Full main experiment ($15-30 typical)
-python -m drift_bench.pipeline --max-budget 400
+# Full main experiment
+python -m drift_bench.pipeline --max-budget <usd>
 ```
 
 ---
@@ -131,6 +191,7 @@ scripts/
   build_dataset_release.py   stage local data → Dataset/ for HF push
   fetch_from_hf.py           HF snapshot → symlinks at canonical local paths
   reproduce.sh               --hf | --aggregate | --analyze | --full
+  evaluate_model.py          score a new subject model on DriftBench
 
 docs/
   dataset_card.md            master HF README (the build script copies this
@@ -151,7 +212,7 @@ python -m drift_bench.pipeline [OPTIONS]
 --models LIST          model IDs to run (default: all)
 --repetitions N        reps per cell (default: from config)
 --concurrency N        max concurrent API calls (default: 5)
---max-budget FLOAT     budget cap in USD (default: from config)
+--max-budget FLOAT     hard cap on API spend in USD (default: from config)
 --no-probe             disable restatement probes
 --reinjection-ids LIST brief IDs for brief re-injection
 --skip-scoring         run subjects only (no judge/auditor)

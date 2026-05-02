@@ -48,7 +48,7 @@ generate_all_figures(
 }
 
 run_full() {
-  echo "==> running full pipeline (subjects + judges + auditor; costs API budget)"
+  echo "==> running full pipeline (subjects + judges + auditor; uses your API quota)"
   $PY -m drift_bench.pipeline --max-budget 400
 }
 

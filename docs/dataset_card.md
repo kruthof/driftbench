@@ -55,8 +55,8 @@ bash scripts/reproduce.sh --hf  # pulls anonymous-driftbench/DriftBench by defau
 5. Regenerates every figure and the LaTeX macros file the paper `\input{}`s.
 
 A full re-run from API calls (subjects → judges → auditor) is also supported
-via `bash scripts/reproduce.sh --full`. Cost: ~$15–30 for the core 5-model
-benchmark; more for open-weight + follow-up experiments.
+via `bash scripts/reproduce.sh --full`. Pass `--max-budget <usd>` (or set
+`budget.max_usd` in `drift_bench/config.yaml`) to cap API spend.
 
 ## What's in the dataset
 
