@@ -7,7 +7,7 @@ coherent but globally misaligned elaborations.
 - **Code**: this repository (MIT licensed).
 - **Data**: published separately on HuggingFace —
   [`anonymous-driftbench/DriftBench`](https://huggingface.co/datasets/anonymous-driftbench/DriftBench).
-- **Paper**: NeurIPS 2026 Datasets & Benchmarks (under review).
+- **Paper**: under review.
 
 ---
 
