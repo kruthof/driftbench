@@ -114,3 +114,72 @@ def test_surface_fidelity_gap_drops_missing_inputs() -> None:
     ])
     out = compute_surface_fidelity_gap(df)
     assert len(out) == 1
+
+
+# ── Knows-but-violates defaults ───────────────────────────────────────────────
+# Regression guard for the 2026-07-26 fix (CHANGELOG §1): the shipped defaults
+# must match the paper's KBV definition, i.e. adherence < 4 and recall measured
+# on `overall_accuracy` (hard constraints AND banned moves).
+
+def _kbv_inputs():
+    from drift_bench.analysis.probes import knows_but_violates_table  # noqa: F401
+    probe_df = pd.DataFrame([
+        # run A: perfect recall, final adherence 3 (one constraint stretched)
+        {"run_id": "A", "brief_id": "b", "model_id": "m", "condition": "multi_turn_pressure",
+         "turn_index": 1, "overall_accuracy": 0.5, "constraint_recall": 0.5, "banned_recall": 0.5},
+        {"run_id": "A", "brief_id": "b", "model_id": "m", "condition": "multi_turn_pressure",
+         "turn_index": 6, "overall_accuracy": 1.0, "constraint_recall": 1.0, "banned_recall": 1.0},
+        # run B: overall recall above 0.8 but hard-constraint recall below it, adherence 2
+        {"run_id": "B", "brief_id": "b", "model_id": "m", "condition": "multi_turn_pressure",
+         "turn_index": 6, "overall_accuracy": 0.85, "constraint_recall": 0.6, "banned_recall": 1.0},
+        # run C: perfect recall, full adherence
+        {"run_id": "C", "brief_id": "b", "model_id": "m", "condition": "multi_turn_pressure",
+         "turn_index": 6, "overall_accuracy": 1.0, "constraint_recall": 1.0, "banned_recall": 1.0},
+    ])
+    scores_df = pd.DataFrame([
+        {"run_id": "A", "j_constraint_adherence": 3, "j_alternative_coverage": 4,
+         "j_objective_fidelity": 4, "j_complexity_inflation": 1, "condition": "multi_turn_pressure", "model_id": "m"},
+        {"run_id": "B", "j_constraint_adherence": 2, "j_alternative_coverage": 4,
+         "j_objective_fidelity": 4, "j_complexity_inflation": 1, "condition": "multi_turn_pressure", "model_id": "m"},
+        {"run_id": "C", "j_constraint_adherence": 4, "j_alternative_coverage": 4,
+         "j_objective_fidelity": 4, "j_complexity_inflation": 1, "condition": "multi_turn_pressure", "model_id": "m"},
+    ])
+    return scores_df, probe_df
+
+
+def test_kbv_default_threshold_counts_stretched_constraints() -> None:
+    """Adherence 3 ("one constraint stretched") is non-compliance under the paper's definition."""
+    from drift_bench.analysis.probes import knows_but_violates_table
+    scores_df, probe_df = _kbv_inputs()
+    table = knows_but_violates_table(scores_df, probe_df).set_index("run_id")
+    assert bool(table.loc["A", "knows_but_violates"]) is True
+    assert bool(table.loc["C", "knows_but_violates"]) is False
+
+
+def test_kbv_default_recall_uses_overall_accuracy() -> None:
+    """The 'knows' criterion is overall probe accuracy, not hard-constraint recall alone."""
+    from drift_bench.analysis.probes import knows_but_violates_table
+    scores_df, probe_df = _kbv_inputs()
+    default = knows_but_violates_table(scores_df, probe_df).set_index("run_id")
+    assert bool(default.loc["B", "knows_but_violates"]) is True
+    strict = knows_but_violates_table(
+        scores_df, probe_df, recall_column="constraint_recall"
+    ).set_index("run_id")
+    assert bool(strict.loc["B", "knows_but_violates"]) is False
+
+
+def test_kbv_summary_rate_matches_table() -> None:
+    from drift_bench.analysis.probes import knows_but_violates_summary
+    scores_df, probe_df = _kbv_inputs()
+    summary = knows_but_violates_summary(scores_df, probe_df)
+    assert summary["total"].iloc[0] == 3
+    assert summary["kbv_count"].iloc[0] == 2
+    assert abs(summary["kbv_rate"].iloc[0] - 2 / 3) < 1e-9
+
+
+def test_kbv_old_defaults_would_have_been_wrong() -> None:
+    """Documents the pre-fix behaviour: threshold 3 zeroes out stretched runs."""
+    from drift_bench.analysis.probes import knows_but_violates_table
+    scores_df, probe_df = _kbv_inputs()
+    old = knows_but_violates_table(scores_df, probe_df, adherence_threshold=3).set_index("run_id")
+    assert bool(old.loc["A", "knows_but_violates"]) is False

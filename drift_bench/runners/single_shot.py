@@ -4,7 +4,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from drift_bench.runners.base import BaseRunner, Message, RunMetadata, Transcript
+from drift_bench.runners.base import (
+    LITELLM_VERSION, BaseRunner, Message, RunMetadata, Transcript,
+)
 from drift_bench.prompts.loader import get_turn_prompts
 
 
@@ -25,9 +27,12 @@ class SingleShotRunner(BaseRunner):
             condition=condition,
             repetition=repetition,
             start_time=time.time(),
+            temperature=self._get_temperature(model_id),
+            max_tokens=self._get_max_tokens(model_id),
+            litellm_version=LITELLM_VERSION,
         )
 
-        turn_prompts = get_turn_prompts("single_shot", brief)
+        turn_prompts = get_turn_prompts("single_shot", brief, prompts_dir=self.prompts_dir)
 
         messages: list[Message] = [
             Message(role="system", content=self.system_prompt, timestamp=time.time()),
@@ -47,6 +52,8 @@ class SingleShotRunner(BaseRunner):
             timestamp=time.time(),
             token_count=result["output_tokens"],
             latency_ms=result["latency_ms"],
+            finish_reason=result.get("finish_reason"),
+            response_model=result.get("response_model"),
         ))
 
         metadata.end_time = time.time()

@@ -16,7 +16,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from drift_bench.runners.base import BaseRunner, Message, RunMetadata, Transcript
+from drift_bench.runners.base import (
+    LITELLM_VERSION, BaseRunner, Message, RunMetadata, Transcript,
+)
 from drift_bench.prompts.loader import (
     get_turn_prompts, get_restatement_probe, render_brief_for_prompt,
 )
@@ -51,8 +53,13 @@ Please reconsider these constraints before continuing."""
 class MonitoredRunner(BaseRunner):
     """Multi-turn pressure with an automated constraint monitor."""
 
-    def __init__(self, config_path: Path | None = None, monitor_model: str = "openai/gpt-5.4-mini"):
-        super().__init__(config_path)
+    def __init__(
+        self,
+        config_path: Path | None = None,
+        monitor_model: str = "openai/gpt-5.4-mini",
+        prompts_dir: Path | None = None,
+    ):
+        super().__init__(config_path, prompts_dir=prompts_dir)
         self.monitor_model = monitor_model
 
     async def _check_constraints(
@@ -111,10 +118,13 @@ class MonitoredRunner(BaseRunner):
             condition=condition,
             repetition=repetition,
             start_time=time.time(),
+            temperature=self._get_temperature(model_id),
+            max_tokens=self._get_max_tokens(model_id),
+            litellm_version=LITELLM_VERSION,
         )
 
         # Use the standard pressure prompts
-        turn_prompts = get_turn_prompts("multi_turn_pressure", brief)
+        turn_prompts = get_turn_prompts("multi_turn_pressure", brief, prompts_dir=self.prompts_dir)
         conversation: list[Message] = [
             Message(role="system", content=self.system_prompt, timestamp=time.time()),
         ]
@@ -145,6 +155,8 @@ class MonitoredRunner(BaseRunner):
                 timestamp=time.time(),
                 token_count=result["output_tokens"],
                 latency_ms=result["latency_ms"],
+                finish_reason=result.get("finish_reason"),
+                response_model=result.get("response_model"),
             ))
 
             total_input += result["input_tokens"]
@@ -184,6 +196,8 @@ class MonitoredRunner(BaseRunner):
                         timestamp=time.time(),
                         token_count=fix_result["output_tokens"],
                         latency_ms=fix_result["latency_ms"],
+                        finish_reason=fix_result.get("finish_reason"),
+                        response_model=fix_result.get("response_model"),
                     ))
 
                     total_input += fix_result["input_tokens"]
@@ -199,7 +213,7 @@ class MonitoredRunner(BaseRunner):
                 )
                 conversation.append(Message(
                     role="user",
-                    content=get_restatement_probe(),
+                    content=get_restatement_probe(prompts_dir=self.prompts_dir),
                     timestamp=time.time(),
                     is_probe=True,
                 ))
@@ -210,6 +224,8 @@ class MonitoredRunner(BaseRunner):
                     token_count=probe_result["output_tokens"],
                     latency_ms=probe_result["latency_ms"],
                     is_probe=True,
+                    finish_reason=probe_result.get("finish_reason"),
+                    response_model=probe_result.get("response_model"),
                 ))
                 total_input += probe_result["input_tokens"]
                 total_output += probe_result["output_tokens"]
@@ -233,7 +249,7 @@ class MonitoredRunner(BaseRunner):
         conversation: list[Message],
     ) -> dict[str, Any]:
         probe_messages = self._build_messages_list(conversation) + [
-            {"role": "user", "content": get_restatement_probe()}
+            {"role": "user", "content": get_restatement_probe(prompts_dir=self.prompts_dir)}
         ]
         return await self._call_llm(
             model_id=model_id,

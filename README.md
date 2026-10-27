@@ -1,39 +1,96 @@
-# DriftBench: Constraint Adherence in Multi-Turn LLM Ideation
+# DriftBench: Constraint Adherence Under Iterative Pressure in Multi-Turn LLM Ideation
 
-DriftBench measures whether LLMs preserve fidelity to a structured research
-brief across multiple turns of iterative pressure, or drift toward locally
-coherent but globally misaligned elaborations.
+DriftBench measures whether LLMs keep the hard constraints of a structured
+research brief across multiple turns of iterative pressure, or drift toward
+locally coherent but globally misaligned elaborations.
 
-- **Code**: this repository (MIT licensed).
-- **Data**: published separately on HuggingFace —
-  [`anonymous-driftbench/DriftBench`](https://huggingface.co/datasets/anonymous-driftbench/DriftBench).
-- **Paper**: under review.
+- **Code**: this repository, <https://github.com/kruthof/driftbench>.
+- **Data**: published separately on Hugging Face,
+  [`driftbench/DriftBench`](https://huggingface.co/datasets/driftbench/DriftBench).
+- **Paper**: Garvin Kruthof. *Constraint Adherence Under Iterative Pressure in
+  Multi-Turn LLM Ideation.* NeurIPS 2026 Evaluations and Datasets Track. Read
+  the PDF on [OpenReview](https://openreview.net/forum?id=9kbTg0tKKr) or arXiv.
+  This repository holds the code only, not the LaTeX sources.
+- **Changes since the submission**: [`CHANGELOG.md`](CHANGELOG.md) records every
+  correction to the released artifact and every camera-ready addition.
 
 ---
 
-## Reproduce the paper numbers in five minutes (no API keys)
+## Reproduce the paper numbers (no API keys)
 
 ```bash
-git clone [GITHUB_URL_PLACEHOLDER] DriftBench && cd DriftBench
+git clone https://github.com/kruthof/driftbench DriftBench && cd DriftBench
 python3.13 -m venv .venv
 .venv/bin/pip install -e .
 
 bash scripts/reproduce.sh --hf
 ```
 
-`--hf` mode pulls the HuggingFace snapshot, symlinks it at the canonical
-local paths the analysis pipeline expects, re-aggregates scores, regenerates
-every figure, and rewrites the LaTeX macros file the paper `\input{}`s. No
-API calls are made — every headline number drops out of the analysis on
-artifacts already on HF.
+`--hf` mode pulls the Hugging Face snapshot (`driftbench/DriftBench`), symlinks
+it at the canonical local paths the analysis pipeline expects, re-aggregates
+the scores, runs analysis items 1 to 6 (item 6 is every camera-ready module),
+regenerates the submission-era figures, and rewrites the LaTeX macros file the
+paper `\input{}`s. No API calls are made.
+
+The camera-ready numbers are `\cr...` macros (values kept from the submitted
+version or the rebuttal are labelled so in the paper). The macros are
+generated from CSVs under `drift_bench/data/camera_ready/analysis/`, each with
+a `.provenance.json` sidecar that lists its inputs, filters and row counts. To
+regenerate only the camera-ready layer:
+
+```bash
+# Every camera-ready CSV, then cr_macros.tex / cr_macros.json (macros run last)
+python -m drift_bench.run_analysis --items 6
+
+# Check the shipped macros against the CSVs without rewriting anything
+python -m drift_bench.analysis.camera_ready.macros --verify
+
+# Look up a macro: name, value and source CSV (regenerates cr_macros.tex/.json;
+# pass --out-dir elsewhere to leave them untouched)
+python -m drift_bench.analysis.camera_ready.macros --list | grep -i kbv
+```
+
+Item 6 imports every module in `drift_bench/analysis/camera_ready/` that has a
+`run()` function and runs them in alphabetical order, with `e7_summary` and
+`macros` last. A failing module is reported and does not stop the others. It
+makes no API calls (litellm fetches its public cost map on import; set
+`LITELLM_LOCAL_MODEL_COST_MAP=True` to stay offline). Two modules are skipped
+on purpose and must be run by hand:
+
+```bash
+# The six camera-ready figures (vector PDFs plus provenance sidecars in figures/)
+python -m drift_bench.analysis.camera_ready.figures_cr
+python -m drift_bench.analysis.camera_ready.figures_cr --only kbv_by_judge_arm trajectories
+
+# The SWE executable-verification harness. It EXECUTES model-written code
+# (temp directory, timeout, process-group kill; no sandbox). Read the code first.
+python -m drift_bench.analysis.camera_ready.swe_verify --extract-only
+python -m drift_bench.analysis.camera_ready.swe_verify --config drift_bench/config_swe_code.yaml
+```
+
+`figures_cr` reads only the CSVs and data on disk. Two runs on the same inputs
+give byte-identical PDFs.
 
 Other reproduction modes:
 
 ```bash
 bash scripts/reproduce.sh --aggregate   # re-aggregate locally-staged JSONL into parquet
-bash scripts/reproduce.sh --analyze     # aggregate + run all priority-list analyses + figures
+bash scripts/reproduce.sh --analyze     # aggregate + run analysis items 1-6 + figures + macros
 bash scripts/reproduce.sh --full        # full pipeline incl. subjects/judges (uses your API quota)
 ```
+
+### Camera-ready data
+
+The camera-ready experiments (crossed-judge calibration, Sonnet without the
+output cap, Gemini Pro probe replay, structured Opus scores, per-turn
+re-scoring, the extended SWE pilot, strict probe re-grading, and the LLM
+annotator labels for the typology and the mechanism hand-check) ship on
+Hugging Face under `camera_ready/`. `scripts/fetch_from_hf.py` (run by
+`reproduce.sh --hf`) links them at `drift_bench/data/camera_ready/`. Each
+experiment directory has a `README.md` with the exact command, date, model ids
+and cost. The one exception is `e6_swe_verify/` (the executable SWE arm): its
+commands are in `e6_swe/README.md`. See [`CHANGELOG.md`](CHANGELOG.md) for
+what each experiment changed and why.
 
 ---
 
@@ -41,10 +98,15 @@ bash scripts/reproduce.sh --full        # full pipeline incl. subjects/judges (u
 
 `scripts/evaluate_model.py` scores any [litellm](https://docs.litellm.ai/)-compatible
 subject model on the published 38 briefs × 4 conditions, using the same
-cross-family judge + auditor as the paper. No edits to `config.yaml` are
-required — the script clones the base config, swaps in your model, adds a
-default rate-limit entry for its provider, runs the pipeline, aggregates the
-scores, and prints a comparison against the published 7-model baseline.
+published-arm judge and auditor as the paper (Claude Opus 4.6 judges
+non-Anthropic subjects, GPT-5.4 judges Anthropic subjects; GPT-5.4 audits).
+No edits to `config.yaml` are required. The script clones the base config,
+swaps in your model, adds a default rate-limit entry for its provider, runs the
+pipeline, aggregates the scores, and prints a comparison against the published
+7-model baseline. The comparison needs the published scores at
+`drift_bench/data/aggregated/all_scores.parquet`; without that file the script
+prints your model's table only. Fetch the Hugging Face data first
+(`bash scripts/reproduce.sh --hf`), or pass `--baseline-parquet <path>`.
 
 ```bash
 # Hosted API (e.g. OpenAI, Anthropic, Gemini)
@@ -75,8 +137,8 @@ drift_bench/data/external/openai_gpt-4o/
 └── run_summary.json
 ```
 
-The script prints a per-condition comparison vs the published benchmark,
-e.g.:
+When the baseline parquet is present, the script prints a per-condition
+comparison vs the published benchmark, e.g.:
 
 ```
 === openai/gpt-4o per-condition mean scores ===
@@ -91,9 +153,29 @@ checkpointed_pressure    38    3.737       3.421    3.526     1.605       0.342
 ...
 ```
 
-Re-running the same command resumes — existing transcripts and scores are
-detected on disk and skipped. To re-score with a different judge, point
-`drift_bench/judges/judge.py` at a different judge id and re-run.
+Re-running the same command resumes: existing transcripts and scores are
+detected on disk and skipped.
+
+**Report a new model the way the paper does.** The camera-ready paper scores
+the single-shot and pressure cells with both judges (Claude Opus 4.6 and
+GPT-5.4), because binary KBV levels depend on the judge. Re-score your
+transcripts with the judge the pipeline did not use, into a directory of its
+own:
+
+```bash
+python -m drift_bench.rescore \
+  --transcripts-dir drift_bench/data/external/openai_gpt-4o/transcripts \
+  --scores-dir drift_bench/data/external/openai_gpt-4o/scores_gpt \
+  --judge-override openai/gpt-5.4 --output-prefix judge_gpt \
+  --mode judge --conditions single_shot multi_turn_pressure \
+  --max-budget <usd> --dry-run      # drop --dry-run to score
+```
+
+`drift_bench/rescore.py` re-judges stored transcripts with any judge, mode
+(`judge`, `structured` or `blind`) and turn index. It never calls the subject
+model, is resumable, and refuses to write into the published score
+directories. To swap the judge for a full pipeline run instead, change
+`models.judges` in `drift_bench/config.yaml`.
 
 ---
 
@@ -122,9 +204,8 @@ python -m drift_bench.pipeline --max-budget <usd>
 
 ### Research question
 
-Do LLMs preserve global fidelity to an initial scientific objective during
-iterative multi-turn refinement, or drift into locally salient but globally
-misaligned elaborations?
+When researchers refine ideas with an LLM over several turns, does the model
+keep the constraints of the original brief?
 
 ### Conditions
 
@@ -133,20 +214,33 @@ misaligned elaborations?
 | `single_shot` | 1 | Baseline: one prompt, one response |
 | `multi_turn_neutral` | 6 | Neutral prompts ("Continue.") — controls for turn count |
 | `multi_turn_pressure` | 6 | Pressure prompts pushing for novelty, rigor, robustness |
-| `checkpointed_pressure` | 8 | Pressure + structured reflection checkpoints |
+| `checkpointed_pressure` | 8 | Pressure + checkpoints that re-elicit the brief after turns 2 and 4 |
 
 ### Models (subjects)
 
 `openai/gpt-5.4`, `openai/gpt-5.4-mini`, `anthropic/claude-sonnet-4-6`,
 `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.1-flash-lite-preview`,
-`qwen/qwen3-235b`, `meta-llama/llama-3.3-70b-instruct`.
+`together_ai/Qwen/Qwen3-235B-A22B-Instruct-2507-tput`,
+`together_ai/meta-llama/Llama-3.3-70B-Instruct-Turbo`.
 
 ### Judging
 
-- **Judge**: Claude Opus 4.6 (cross-family — GPT-5.4 judges Anthropic runs).
-- **Auditor**: GPT-5.4 (independent drift classification + recoverability).
+- **Published arm (all four conditions)**: cross-family. Claude Opus 4.6 judges
+  non-Anthropic runs; GPT-5.4 judges Anthropic runs. No model judges its own
+  outputs.
+- **Crossed-judge design (camera-ready)**: both Claude Opus 4.6 and GPT-5.4
+  score every run of all seven models in the single-shot and pressure cells.
+  The common Opus 4.6 judge is the primary arm and the common GPT-5.4 judge the
+  robustness check. Neutral and checkpointed cells have published-arm scores
+  only.
+- **Auditor**: GPT-5.4 (holistic drift classification + recoverability;
+  supplementary to the judge).
 - **Dimensions**: objective fidelity, constraint adherence, alternative
   coverage, complexity inflation (each 0–4); recoverability (0–4).
+- **Derived metrics**: non-compliance (judge adherence < 4); knows-but-violates
+  (KBV: non-compliant on a pressure run whose final restatement probe scores
+  `overall_accuracy >= 0.8`); gKBV (mean share of hard constraints a structured
+  judge marks stretched or violated).
 - **Inter-rater reliability**: quadratic-weighted Cohen's kappa and
   Krippendorff's alpha between judge and auditor.
 
@@ -161,11 +255,12 @@ misaligned elaborations?
 
 ### Additional instrumentation
 
-- **Restatement probe**: at each turn, a separate API call checks whether
-  the model can reproduce the original constraints (separates drift from
-  forgetting).
-- **Brief re-injection**: on a subset, the full brief is pasted into every
-  turn to definitively rule out context-window loss.
+- **Restatement probe**: after each of turns 1 to 5, a separate API call asks
+  the model to restate the objective, hard constraints and banned moves. The
+  answer is stored with `is_probe: true` and never shown back to the model. It
+  tests whether the constraints stay legible and reproducible on demand.
+- **Brief re-injection**: an optional pipeline flag (`--reinjection-ids`)
+  pastes the full brief into every turn of the listed briefs.
 
 ---
 
@@ -175,17 +270,27 @@ misaligned elaborations?
 drift_bench/
   config.yaml         model IDs, rate limits, budget
   pipeline.py         single entry point: subjects → judge → auditor → summary
+  rescore.py          re-judge stored transcripts with a chosen judge (camera-ready)
+  run_analysis.py     analysis items 1-6
   briefs/             38 YAML research briefs across 24 domains
-  prompts/            13 Jinja2 templates (system, conditions, judge, auditor, probe)
-  runners/            single_shot, multi_turn, checkpointed, monitored
+  briefs_swe/         SWE pilot briefs (outside the 38) and contract tests
+  prompts/            Jinja2 templates (system, conditions, judge, auditor, probe)
+  prompts_swe/        SWE pilot templates; prompts_swe_code/ for the executable arm
+  runners/            single_shot, multi_turn, checkpointed, monitored, reprobe
   judges/             cross-family judge + auditor + blind/structured variants
   analysis/           aggregate.py, stats.py, reliability.py, verbosity.py,
                       probes.py, validation.py, debiasing.py, figures.py,
                       release_manifest.py
+  analysis/camera_ready/
+                      one module per camera-ready analysis; each has run()
+                      and a CLI (python -m drift_bench.analysis.camera_ready.<name>)
   schema/             JSON Schema for brief validation
-  data/               output (gitignored): transcripts, scores, aggregated, analysis,
-                      figures — populated either by running the pipeline or by
-                      `scripts/fetch_from_hf.py`
+  data/               output (not in git): transcripts, scores, aggregated,
+                      analysis, camera_ready, figures — populated either by
+                      running the pipeline or by `scripts/fetch_from_hf.py`
+
+figures/              camera-ready figure PDFs + provenance, written by
+                      figures_cr.py (created on first run)
 
 scripts/
   build_dataset_release.py   stage local data → Dataset/ for HF push
@@ -196,6 +301,9 @@ scripts/
 docs/
   dataset_card.md            master HF README (the build script copies this
                              into Dataset/README.md)
+  swe_pilot_recovered/       recovered SWE pilot briefs and prompts (read by
+                             camera_ready/checkers.py and the SWE tests)
+  swe_pilot_reconstruction.md  how the SWE pilot was reconstructed
 ```
 
 ---
@@ -207,6 +315,9 @@ python -m drift_bench.pipeline [OPTIONS]
 
 --config PATH          config file (default: drift_bench/config.yaml)
 --briefs-dir PATH      briefs directory (default: drift_bench/briefs)
+--prompts-dir PATH     prompt templates directory (default: drift_bench/prompts)
+--rubrics PATH         judge rubrics file (default: drift_bench/judges/rubrics.yaml)
+--calibration PATH     judge calibration examples (default: drift_bench/judges/calibration.yaml)
 --output PATH          output directory (default: drift_bench/data)
 --conditions LIST      conditions to run (default: all)
 --models LIST          model IDs to run (default: all)
@@ -218,20 +329,22 @@ python -m drift_bench.pipeline [OPTIONS]
 --skip-scoring         run subjects only (no judge/auditor)
 ```
 
-Priority-list analyses (each item produces one or more CSVs/JSONs that the
-paper macros derive from):
+Analysis items (each item produces one or more CSVs/JSONs that the paper
+macros derive from):
 
 ```
-python -m drift_bench.run_analysis --items all     # 1..5
+python -m drift_bench.run_analysis --items all     # 1..6
 python -m drift_bench.run_analysis --items 1       # inter-rater reliability
 python -m drift_bench.run_analysis --items 2       # verbosity-controlled regression
 python -m drift_bench.run_analysis --items 3       # restatement probes + surface gap
 python -m drift_bench.run_analysis --items 4       # judge validation
 python -m drift_bench.run_analysis --items 5       # debiasing
+python -m drift_bench.run_analysis --items 6       # every camera-ready module, macros last
 ```
 
 Release manifest (regenerates the per-snapshot file inventory and the
-`\input{}`-able LaTeX macros file):
+`\input{}`-able LaTeX macros file; it also regenerates `cr_macros.tex` and
+appends the `\input` line that loads it):
 
 ```
 python -m drift_bench.analysis.release_manifest \
@@ -247,8 +360,8 @@ python -m drift_bench.analysis.release_manifest \
   transcripts/scores).
 - **Budget cap**: configurable max spend with real-time tracking
   (`--max-budget`). Checked inside semaphore to prevent race conditions.
-- **Cross-family judging**: Claude judges GPT/Gemini runs; GPT judges Claude
-  runs. Never self-judge.
+- **Cross-family judging**: Claude judges GPT/Gemini/open-weight runs; GPT
+  judges Claude runs. Never self-judge.
 - **Rate limiting**: per-provider token-bucket with sleep-outside-lock pattern.
 - **Retry**: covers 429, 500, 503, connection errors, timeouts (5 attempts,
   exponential backoff).
@@ -264,15 +377,15 @@ python scripts/build_dataset_release.py --clean
 # 2. Sanity checks
 du -sh Dataset/
 find Dataset/ -name "*.pdf" -o -name "*.html" | wc -l    # MUST be 0
-grep -ricf <(jq -r '.forbidden_substrings[]' .anonymize.json) Dataset/  # MUST be 0
+grep -rlF "$(pwd)/" Dataset/ | wc -l                     # MUST be 0 (no local root path)
 
 # 3. Push to HF (one-time setup: pip install huggingface-hub && huggingface-cli login)
 huggingface-cli upload-large-folder \
-  --repo-type=dataset anonymous-driftbench/DriftBench Dataset/
+  --repo-type=dataset driftbench/DriftBench Dataset/
 
 # 4. Verify the loop in a fresh tmpdir
 mkdir /tmp/repro && cd /tmp/repro
-git clone https://github.com/$GH_REPO . && python -m venv .venv
+git clone https://github.com/kruthof/driftbench . && python -m venv .venv
 .venv/bin/pip install -e .
 bash scripts/reproduce.sh --hf
 ```
@@ -281,24 +394,46 @@ The build script enforces (and fails the build on):
 
 - No files with `.pdf` / `.html` extensions land under `Dataset/`.
 - No forbidden substring (configured in `.anonymize.json`) appears in any
-  text file.
+  text file. The list is empty since the camera-ready de-anonymization: its
+  entries were forms of the author's name, which is now public.
+- No local path remains. The build strips the absolute repository root (and
+  any Claude Code scratchpad prefix) from the staged copies of text files
+  (provenance sidecars, run summaries, logs), so recorded paths ship
+  repository-relative. Source files are not modified. The build fails if the
+  root path or the user's home directory is still present in a staged file.
 - A SHA-256 manifest is written for every shipped file.
+
+`--out <dir>` stages elsewhere (relative to the repository root, or absolute);
+the script refuses a directory that overlaps a source path (including
+`docs/dataset_card.md` and `.anonymize.json`), and a non-empty directory without a
+MANIFEST.txt from an earlier build.
 
 ---
 
 ## Citation
 
 ```bibtex
-@misc{driftbench2026,
-  title  = {Models Recall What They Violate: Constraint Adherence in Multi-Turn LLM Ideation},
-  author = {Anonymous},
-  year   = {2026},
-  url    = {https://huggingface.co/datasets/anonymous-driftbench/DriftBench}
+@inproceedings{kruthof2026constraint,
+  title     = {Constraint Adherence Under Iterative Pressure in Multi-Turn {LLM} Ideation},
+  author    = {Kruthof, Garvin},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS) Evaluations and Datasets Track},
+  year      = {2026},
+  url       = {https://github.com/kruthof/driftbench}
+}
+
+@misc{kruthof2026driftbenchdata,
+  title        = {{DriftBench}: Transcripts, Scores and Analysis Outputs},
+  author       = {Kruthof, Garvin},
+  year         = {2026},
+  howpublished = {Hugging Face dataset},
+  url          = {https://huggingface.co/datasets/driftbench/DriftBench}
 }
 ```
 
 ## License
 
-- Source code: **MIT** (see `LICENSE`).
-- Dataset (transcripts, scores, analysis outputs on HuggingFace): **CC-BY 4.0**.
-- Human-annotation files: **CC-BY-NC 4.0**.
+- Source code (this repository): **MIT** (see `LICENSE`).
+- Dataset on Hugging Face (briefs, prompts, transcripts, scores, analysis
+  outputs): **CC-BY 4.0**.
+- Anonymized human-rater files (`human_validation/raters/` in the dataset):
+  **CC-BY-NC 4.0** (non-commercial).

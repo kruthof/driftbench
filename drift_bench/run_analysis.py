@@ -1,20 +1,26 @@
 """Entry point for running all priority list analyses.
 
 Usage:
-    python -m drift_bench.run_analysis [--items 1,2,3,4] [--output-dir drift_bench/data/analysis]
+    python -m drift_bench.run_analysis [--items 1 2 3] [--output-dir drift_bench/data/analysis]
+    python -m drift_bench.run_analysis --items reliability camera_ready
 
-Items:
-    1: Inter-rater reliability (run FIRST)
-    2: Verbosity-controlled complexity regression
-    3: Restatement probe analysis + surface fidelity gap
-    4: LLM-judge validation
+Items (number or name):
+    1 reliability:   Inter-rater reliability (run FIRST)
+    2 verbosity:     Verbosity-controlled complexity regression
+    3 probes:        Restatement probe analysis + surface fidelity gap
+    4 validation:    LLM-judge validation
+    5 debiasing:     Score debiasing and averaging
+    6 camera_ready:  Every module in drift_bench.analysis.camera_ready with run()
     all: Run all items (default)
 """
 
 import argparse
+import importlib
 import json
+import pkgutil
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pandas as pd
 
@@ -27,6 +33,85 @@ DEFAULT_TRANSCRIPTS = BASE_DIR / "data" / "transcripts"
 DEFAULT_BRIEFS = BASE_DIR / "briefs"
 DEFAULT_OUTPUT = BASE_DIR / "data" / "analysis"
 DEFAULT_FIGURES = BASE_DIR / "data" / "figures"
+DEFAULT_DATA_ROOT = BASE_DIR / "data"
+DEFAULT_CAMERA_READY_OUTPUT = BASE_DIR / "data" / "camera_ready" / "analysis"
+
+ITEM_NAMES: dict[str, int] = {
+    "reliability": 1,
+    "verbosity": 2,
+    "probes": 3,
+    "validation": 4,
+    "debiasing": 5,
+    "camera_ready": 6,
+}
+ALL_ITEMS: list[int] = sorted(ITEM_NAMES.values())
+
+
+def parse_items(tokens: list[str] | str) -> list[int]:
+    """Turn ``--items`` tokens into item numbers.
+
+    Accepts numbers ("1"), names ("camera_ready"), comma-separated lists
+    ("1,2,3") and the word "all". Order is kept; duplicates are dropped.
+    Raises ValueError on an unknown token.
+    """
+    if isinstance(tokens, str):
+        tokens = [tokens]
+    items: list[int] = []
+    for token in tokens:
+        for part in token.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            key = part.lower().replace("-", "_")
+            if key == "all":
+                chosen = ALL_ITEMS
+            elif key in ITEM_NAMES:
+                chosen = [ITEM_NAMES[key]]
+            elif key.isdigit() and int(key) in ALL_ITEMS:
+                chosen = [int(key)]
+            else:
+                raise ValueError(
+                    f"Unknown item {part!r}. Use 1-{ALL_ITEMS[-1]}, "
+                    f"{', '.join(ITEM_NAMES)} or 'all'."
+                )
+            for item in chosen:
+                if item not in items:
+                    items.append(item)
+    return items
+
+
+# Modules that read the CSVs the other camera_ready modules write; they
+# run after everything else, in this order (macros is always the last).
+# rebuttal_reproduction reads e7_strict_probe_runs.csv, which e7_summary writes.
+ITEM_6_RUN_LAST = ("e7_summary", "rebuttal_reproduction", "macros")
+
+
+def discover_camera_ready_modules(
+    package_name: str = "drift_bench.analysis.camera_ready",
+) -> list[tuple[str, ModuleType]]:
+    """Import every module in the camera_ready package that defines ``run``.
+
+    Returns (module_name, module) pairs in alphabetical order. Modules
+    without a callable ``run`` are skipped. Private modules (``_name``)
+    are skipped.
+    """
+    package = importlib.import_module(package_name)
+    found: list[tuple[str, ModuleType]] = []
+    for info in sorted(pkgutil.iter_modules(package.__path__), key=lambda i: i.name):
+        if info.name.startswith("_"):
+            continue
+        module = importlib.import_module(f"{package_name}.{info.name}")
+        if not callable(getattr(module, "run", None)):
+            continue
+        if getattr(module, "RUN_IN_ITEM_6", True) is False:
+            # Opt-out for modules that must be run on purpose (e.g. the
+            # SWE harness, which executes model-written code).
+            continue
+        found.append((info.name, module))
+    # Modules that consume the other modules' CSVs run last, in this order.
+    tail = [n for n in ITEM_6_RUN_LAST if n in dict(found)]
+    found.sort(key=lambda pair: (tail.index(pair[0]) + 1 if pair[0] in tail else 0, pair[0]))
+    return found
 
 
 def run_item_1(df: pd.DataFrame, output_dir: Path) -> None:
@@ -165,7 +250,10 @@ def run_item_3(
     from drift_bench.analysis.figures import fig_surface_fidelity_gap, fig_knows_but_violates
 
     print("\n=== Item 3: Restatement Probe Analysis + Surface Fidelity Gap ===")
-    results = run_probe_analysis(transcripts_dir, briefs_dir, df)
+    # Open-weight subject runs live outside the main transcripts tree; include them
+    # so probe coverage spans all seven subject models.
+    extra_dirs = [transcripts_dir.parent / "openweight_subjects" / "transcripts"]
+    results = run_probe_analysis(transcripts_dir, briefs_dir, df, extra_transcripts_dirs=extra_dirs)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -341,15 +429,50 @@ def run_item_5(
     print("    Complexity:  JUDGE    (best reliability kappa=0.71)")
 
 
+def run_item_6(data_root: Path, out_dir: Path) -> dict[str, dict]:
+    """Item 6: every camera-ready analysis module.
+
+    Each module exposes ``run(data_root, out_dir) -> dict[str, DataFrame]``.
+    Returns {module_name: module result}. A failing module is reported
+    and does not stop the others.
+    """
+    print("\n=== Item 6: Camera-Ready Analyses ===")
+    modules = discover_camera_ready_modules()
+    if not modules:
+        print("  No camera_ready modules with run() found.")
+        return {}
+    out_dir.mkdir(parents=True, exist_ok=True)
+    results: dict[str, dict] = {}
+    for name, module in modules:
+        print(f"\n  --- {name} ---")
+        try:
+            result = module.run(data_root, out_dir)
+            if not isinstance(result, dict):
+                raise TypeError(
+                    f"run() must return dict[str, DataFrame], got {type(result).__name__}"
+                )
+            results[name] = result
+            for key, value in result.items():
+                n = len(value) if hasattr(value, "__len__") else "?"
+                print(f"    {key}: {n} rows")
+        except Exception as e:  # keep going; report at the end
+            print(f"  ERROR in {name}: {e}")
+            results[name] = {"error": str(e)}
+    failed = [n for n, r in results.items() if isinstance(r, dict) and "error" in r]
+    print(f"\n  Ran {len(modules)} module(s); {len(failed)} failed{': ' + ', '.join(failed) if failed else ''}")
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run priority list analyses for drift_bench."
     )
     parser.add_argument(
         "--items",
-        type=str,
-        default="all",
-        help="Comma-separated item numbers to run (e.g., '1,2,3') or 'all'",
+        nargs="+",
+        default=["all"],
+        help="Items to run: numbers or names, space- or comma-separated "
+             f"(e.g. '1 2 3', '1,2,3', 'camera_ready'), or 'all'. Names: {', '.join(ITEM_NAMES)}",
     )
     parser.add_argument(
         "--aggregated",
@@ -375,21 +498,35 @@ def main():
         default=DEFAULT_OUTPUT,
         help="Output directory for analysis results",
     )
+    parser.add_argument(
+        "--data-root",
+        type=Path,
+        default=DEFAULT_DATA_ROOT,
+        help="Data root passed to camera_ready modules (item 6)",
+    )
+    parser.add_argument(
+        "--camera-ready-dir",
+        type=Path,
+        default=DEFAULT_CAMERA_READY_OUTPUT,
+        help="Output directory for camera_ready modules (item 6)",
+    )
     args = parser.parse_args()
 
     # Parse items
-    if args.items == "all":
-        items = [1, 2, 3, 4, 5]
-    else:
-        items = [int(x.strip()) for x in args.items.split(",")]
-
-    # Load aggregated scores
-    print(f"Loading aggregated scores from {args.aggregated}")
-    df = load_aggregated(args.aggregated)
-    print(f"  Loaded {len(df)} scored runs")
+    try:
+        items = parse_items(args.items)
+    except ValueError as e:
+        parser.error(str(e))
 
     output_dir = args.output_dir
     merged_df = None
+    df = None
+
+    # Items 1 to 5 need the aggregated scores. Item 6 reads data_root itself.
+    if any(i in items for i in (1, 2, 3, 4, 5)):
+        print(f"Loading aggregated scores from {args.aggregated}")
+        df = load_aggregated(args.aggregated)
+        print(f"  Loaded {len(df)} scored runs")
 
     # Run items in priority order
     if 1 in items:
@@ -406,6 +543,9 @@ def main():
 
     if 5 in items:
         run_item_5(df, args.transcripts, output_dir)
+
+    if 6 in items:
+        run_item_6(args.data_root, args.camera_ready_dir)
 
     print(f"\n=== All requested items complete. Results in {output_dir} ===")
 

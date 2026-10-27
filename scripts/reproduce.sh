@@ -18,19 +18,38 @@ PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || PY=python
 
 run_aggregate() {
-  echo "==> aggregating per-run JSONL -> parquet"
+  echo "==> aggregating per-run JSONL -> parquet (commercial + open-weight)"
   $PY -c "
+import pandas as pd
 from pathlib import Path
 from drift_bench.analysis.aggregate import aggregate_scores
-out = Path('drift_bench/data/aggregated/all_scores.parquet')
-out.parent.mkdir(parents=True, exist_ok=True)
-df = aggregate_scores(Path('drift_bench/data/scores'), out)
-print(f'  aggregated {len(df)} rows -> {out}')
+
+agg_dir = Path('drift_bench/data/aggregated')
+agg_dir.mkdir(parents=True, exist_ok=True)
+
+main_out = agg_dir / 'main_scores.parquet'
+open_out = agg_dir / 'openweight_scores.parquet'
+combined_out = agg_dir / 'all_scores.parquet'
+
+main_df = aggregate_scores(Path('drift_bench/data/scores'), main_out)
+print(f'  commercial: {len(main_df)} rows -> {main_out}')
+
+open_src = Path('drift_bench/data/openweight_subjects/scores')
+if open_src.is_dir() and any(open_src.iterdir()):
+    open_df = aggregate_scores(open_src, open_out)
+    print(f'  open-weight: {len(open_df)} rows -> {open_out}')
+    combined = pd.concat([main_df, open_df], ignore_index=True)
+else:
+    print('  open-weight: no scores found, skipping')
+    combined = main_df
+
+combined.to_parquet(combined_out, index=False)
+print(f'  combined: {len(combined)} rows -> {combined_out}')
 "
 }
 
 run_analysis() {
-  echo "==> running priority-list analyses (items 1-5)"
+  echo "==> running priority-list analyses (items 1-6)"
   $PY -m drift_bench.run_analysis --items all
   echo "==> regenerating figures"
   $PY -c "
@@ -42,6 +61,8 @@ generate_all_figures(
 )
 "
   echo "==> regenerating release manifest + paper macros"
+  # release_manifest also regenerates drift_bench/data/camera_ready/analysis/cr_macros.tex
+  # (drift_bench.analysis.camera_ready.macros) and makes release_macros.tex \input it.
   $PY -m drift_bench.analysis.release_manifest \
     --output drift_bench/data/analysis/release_manifest.json \
     --tex-output drift_bench/data/analysis/release_macros.tex

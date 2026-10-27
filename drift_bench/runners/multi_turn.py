@@ -4,7 +4,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from drift_bench.runners.base import BaseRunner, Message, RunMetadata, Transcript
+from drift_bench.runners.base import (
+    LITELLM_VERSION, BaseRunner, Message, RunMetadata, Transcript,
+)
 from drift_bench.prompts.loader import (
     get_turn_prompts, get_restatement_probe, render_brief_for_prompt,
     get_checkpoint_indices,
@@ -30,9 +32,12 @@ class MultiTurnRunner(BaseRunner):
             condition=condition,
             repetition=repetition,
             start_time=time.time(),
+            temperature=self._get_temperature(model_id),
+            max_tokens=self._get_max_tokens(model_id),
+            litellm_version=LITELLM_VERSION,
         )
 
-        turn_prompts = get_turn_prompts(condition, brief)
+        turn_prompts = get_turn_prompts(condition, brief, prompts_dir=self.prompts_dir)
         checkpoint_indices = get_checkpoint_indices(condition)
         conversation: list[Message] = [
             Message(role="system", content=self.system_prompt, timestamp=time.time()),
@@ -68,6 +73,8 @@ class MultiTurnRunner(BaseRunner):
                 timestamp=time.time(),
                 token_count=result["output_tokens"],
                 latency_ms=result["latency_ms"],
+                finish_reason=result.get("finish_reason"),
+                response_model=result.get("response_model"),
             ))
 
             total_input += result["input_tokens"]
@@ -84,7 +91,7 @@ class MultiTurnRunner(BaseRunner):
                 )
                 conversation.append(Message(
                     role="user",
-                    content=get_restatement_probe(),
+                    content=get_restatement_probe(prompts_dir=self.prompts_dir),
                     timestamp=time.time(),
                     is_probe=True,
                 ))
@@ -95,6 +102,8 @@ class MultiTurnRunner(BaseRunner):
                     token_count=probe_result["output_tokens"],
                     latency_ms=probe_result["latency_ms"],
                     is_probe=True,
+                    finish_reason=probe_result.get("finish_reason"),
+                    response_model=probe_result.get("response_model"),
                 ))
                 total_input += probe_result["input_tokens"]
                 total_output += probe_result["output_tokens"]
@@ -110,23 +119,35 @@ class MultiTurnRunner(BaseRunner):
             transcript.save(output_dir)
         return transcript
 
+    def _get_probe_max_tokens(self) -> int:
+        """Probe cap from config (experiment.probe_max_tokens).
+
+        Defaults to 1024, the value the April 2026 runs used.
+        """
+        return int(self.config.get("experiment", {}).get("probe_max_tokens", 1024))
+
     async def _run_restatement_probe(
         self,
         model_id: str,
         conversation: list[Message],
+        max_tokens: int | None = None,
     ) -> dict[str, Any]:
         """Run the restatement probe as a separate API call.
 
         Uses the current conversation context but the probe exchange
         is NOT added to the main conversation the model sees on subsequent turns
         (filtered by is_probe flag in _build_messages_list).
+
+        ``max_tokens`` defaults to ``experiment.probe_max_tokens`` in config.yaml.
         """
+        if max_tokens is None:
+            max_tokens = self._get_probe_max_tokens()
         probe_messages = self._build_messages_list(conversation) + [
-            {"role": "user", "content": get_restatement_probe()}
+            {"role": "user", "content": get_restatement_probe(prompts_dir=self.prompts_dir)}
         ]
         return await self._call_llm(
             model_id=model_id,
             messages=probe_messages,
             temperature=0.0,
-            max_tokens=1024,
+            max_tokens=max_tokens,
         )

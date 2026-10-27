@@ -24,6 +24,18 @@ from drift_bench.prompts.loader import render_system_prompt
 litellm.suppress_debug_info = True
 
 
+def _litellm_version() -> str | None:
+    """Return the installed litellm version, or None if it cannot be read."""
+    try:
+        from importlib.metadata import version
+        return version("litellm")
+    except Exception:
+        return getattr(litellm, "__version__", None)
+
+
+LITELLM_VERSION: str | None = _litellm_version()
+
+
 @dataclass
 class Message:
     """A single message in a conversation."""
@@ -33,6 +45,14 @@ class Message:
     token_count: int | None = None
     latency_ms: float | None = None
     is_probe: bool = False
+    # Logged from the API response (X4). Old transcripts lack these keys.
+    finish_reason: str | None = None
+    response_model: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Message":
+        """Build from a stored dict. Missing keys take defaults; extra keys are ignored."""
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
 @dataclass
@@ -49,6 +69,15 @@ class RunMetadata:
     total_output_tokens: int = 0
     total_cost_usd: float = 0.0
     error: str | None = None
+    # Generation settings and library version (X4). Old transcripts lack these keys.
+    temperature: float | None = None
+    max_tokens: int | None = None
+    litellm_version: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "RunMetadata":
+        """Build from a stored dict. Missing keys take defaults; extra keys are ignored."""
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
 @dataclass
@@ -62,6 +91,19 @@ class Transcript:
             "metadata": asdict(self.metadata),
             "messages": [asdict(m) for m in self.messages],
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Transcript":
+        """Build from a stored transcript dict (one JSONL record).
+
+        Tolerates transcripts written before X4 (no finish_reason,
+        response_model, temperature, max_tokens, litellm_version) and
+        transcripts with keys this version does not know.
+        """
+        return cls(
+            metadata=RunMetadata.from_dict(data.get("metadata", {})),
+            messages=[Message.from_dict(m) for m in data.get("messages", [])],
+        )
 
     def save(self, output_dir: Path) -> Path:
         """Save transcript as a JSONL append (one line per run, atomic write)."""
@@ -119,13 +161,20 @@ class RateLimiter:
 class BaseRunner:
     """Base class for all experimental runners."""
 
-    def __init__(self, config_path: Path | None = None):
+    def __init__(
+        self,
+        config_path: Path | None = None,
+        prompts_dir: Path | None = None,
+    ):
         if config_path is None:
             config_path = Path(__file__).parent.parent / "config.yaml"
         with open(config_path) as f:
             self.config = yaml.safe_load(f)
 
-        self.system_prompt = render_system_prompt()
+        # None means the loader's default directory (drift_bench/prompts,
+        # or whatever set_default_prompts_dir() chose).
+        self.prompts_dir = Path(prompts_dir) if prompts_dir is not None else None
+        self.system_prompt = render_system_prompt(prompts_dir=self.prompts_dir)
         self._rate_limiters: dict[str, RateLimiter] = {}
         self._init_rate_limiters()
 
@@ -182,7 +231,8 @@ class BaseRunner:
     ) -> dict[str, Any]:
         """Make a single LLM API call via litellm with retry and rate limiting.
 
-        Returns dict with keys: content, input_tokens, output_tokens, cost, latency_ms
+        Returns dict with keys: content, input_tokens, output_tokens, cost,
+        latency_ms, finish_reason, response_model.
         """
         provider = self._get_provider(model_id)
         limiter = self._rate_limiters.get(provider)
@@ -208,8 +258,17 @@ class BaseRunner:
         except Exception as e:
             logging.getLogger(__name__).warning(f"Cost lookup failed for {model_id}: {e}")
             cost = 0.0
+        cost_estimated = False
+        if not cost:
+            # Fallback for the budget cap only: config.yaml `pricing` map.
+            estimate = self._estimate_cost(model_id, usage.prompt_tokens, usage.completion_tokens)
+            if estimate is not None:
+                cost = estimate
+                cost_estimated = True
 
         content = response.choices[0].message.content or ""
+        finish_reason = getattr(response.choices[0], "finish_reason", None)
+        response_model = getattr(response, "model", None)
 
         return {
             "content": content,
@@ -217,7 +276,23 @@ class BaseRunner:
             "output_tokens": usage.completion_tokens,
             "cost": cost,
             "latency_ms": elapsed_ms,
+            "finish_reason": finish_reason,
+            "response_model": response_model,
+            "cost_estimated": cost_estimated,
         }
+
+    def _estimate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float | None:
+        """Token-based cost from the config `pricing` map. None if the model is absent.
+
+        Used only when litellm reports no cost, and only for the budget cap.
+        """
+        pricing = (self.config.get("pricing") or {}).get(model_id)
+        if not pricing:
+            return None
+        return (
+            (input_tokens or 0) * float(pricing.get("input_cost_per_token", 0.0))
+            + (output_tokens or 0) * float(pricing.get("output_cost_per_token", 0.0))
+        )
 
     def _build_messages_list(self, conversation: list[Message]) -> list[dict[str, str]]:
         """Convert internal Message list to litellm format, excluding probe messages."""

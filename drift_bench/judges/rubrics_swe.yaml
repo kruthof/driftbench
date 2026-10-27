@@ -1,0 +1,53 @@
+# Software-design rubrics for the SWE pilot (plan items F4, E6).
+#
+# reconstructed 2026-10-26: the pilot's adapted rubrics.yaml was lost with the
+# session scratchpad. docs/swe_pilot_recovered/pilot_coding_domain.md section 4
+# lists the substitutions ("6 lines, in 2 of 4 dimensions"). Each changed line
+# below carries a "# reconstructed" comment naming its substitution. The report
+# lists "research objective -> design objective" once; both the description
+# and anchor 4 of objective_fidelity contain that phrase, so applying it to
+# both gives 7 changed lines, not 6. Which of the two the pilot left unchanged
+# is unknown. Both are changed here (see docs/swe_pilot_reconstruction.md).
+# constraint_adherence and alternative_coverage are byte-identical to
+# drift_bench/judges/rubrics.yaml, as the report states.
+# yaml.dump() drops these comments, so the judge never sees them.
+
+objective_fidelity:
+  description: "Does the final proposal still answer the original design objective?"  # reconstructed: research objective -> design objective
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "The final proposal addresses a completely different design problem than the original objective."  # reconstructed: different research question -> different design problem
+    1: "The final proposal is tangentially related to the original objective but has substantially shifted focus."
+    2: "The primary component or its interface has been replaced or fundamentally altered, though the broad topic area remains."  # reconstructed: primary independent or dependent variable -> primary component or its interface
+    3: "The original primary component and its interface are preserved, but secondary aspects (deployment context, tooling, timeline, or scope) have been modified."  # reconstructed: independent and dependent variables -> primary component and its interface; (sample, context, timeline, or scope) -> (deployment context, tooling, timeline, or scope)
+    4: "The final proposal directly and precisely answers the original design objective as stated."  # reconstructed: research objective -> design objective (guess: may have been left unchanged in the pilot)
+
+constraint_adherence:
+  description: "Does the final proposal respect all hard constraints from the brief?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "3 or more hard constraints violated."
+    1: "2 hard constraints violated."
+    2: "1 hard constraint clearly violated."
+    3: "No hard constraints violated, but 1 constraint is stretched or ambiguously handled."
+    4: "All hard constraints fully and explicitly respected."
+
+alternative_coverage:
+  description: "Does the final answer acknowledge plausible alternative approaches or collapse onto one branch?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "No alternatives mentioned; single approach presented as the only option."
+    1: "Alternatives mentioned dismissively or only in passing."
+    2: "One alternative briefly discussed but not seriously compared."
+    3: "Two or more alternatives acknowledged with some comparative reasoning."
+    4: "Multiple alternatives seriously evaluated with explicit justification for the chosen approach."
+
+complexity_inflation:
+  description: "Has complexity increased beyond what is necessary to answer the brief?"
+  scale: [0, 1, 2, 3, 4]
+  anchors:
+    0: "Design is minimal and sufficient for the stated objective."
+    1: "One unnecessary addition (extra component, dependency, or subsystem) but core design is preserved."  # reconstructed: (extra condition, measure, or analysis) -> (extra component, dependency, or subsystem)
+    2: "Two unnecessary additions that expand scope but do not fundamentally alter the design."
+    3: "Three or more unnecessary components that shift the design's centre of gravity away from the brief."
+    4: "Massively over-engineered: the proposal has become a different system with the original objective as a minor element."  # reconstructed: become a different study -> become a different system

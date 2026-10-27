@@ -18,6 +18,11 @@ import yaml
 
 from drift_bench.runners.base import BaseRunner
 from drift_bench.prompts.loader import render_brief_for_prompt
+from drift_bench.judges.judge import (
+    score_from_record,
+    score_output_path,
+    truncate_transcript_dict_at_turn,
+)
 
 
 SKEPTICAL_PROMPT = """You are a strict research proposal auditor. Your job is to find constraint violations.
@@ -87,17 +92,53 @@ class SkepticalJudgeScore:
     timestamp: float = 0.0
     latency_ms: float = 0.0
     raw_response: str = ""
+    # Added for the camera-ready (X1, X2). Old records lack these keys.
+    turn_index: int | None = None
+    judge_response_model: str | None = None
+    cost_usd: float = 0.0
+    # True when cost_usd came from the config `pricing` fallback, not litellm.
+    cost_estimated: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
+DEFAULT_SKEPTICAL_JUDGE = "openai/gpt-5.4"
+
+
 class SkepticalJudgePipeline(BaseRunner):
     """Score proposals with skeptical constraint checking."""
 
-    def __init__(self, config_path: Path | None = None):
-        super().__init__(config_path)
-        self.judge_model = "openai/gpt-5.4"
+    def __init__(
+        self,
+        config_path: Path | None = None,
+        judge_override: str | None = None,
+        output_prefix: str = "skeptical",
+        prompts_dir: Path | None = None,
+        rubrics_path: Path | None = None,
+        calibration_path: Path | None = None,
+    ):
+        """Build the skeptical judge.
+
+        rubrics_path and calibration_path are accepted so every judge
+        pipeline shares one constructor signature (rescore.py relies on
+        that). This judge embeds its rubric in SKEPTICAL_PROMPT and uses
+        no calibration examples, so both are ignored.
+        """
+        super().__init__(config_path, prompts_dir=prompts_dir)
+        self.rubrics_path = rubrics_path  # accepted, unused
+        self.calibration_path = calibration_path  # accepted, unused
+        self.judge_override = judge_override
+        self.output_prefix = output_prefix
+        # The skeptical prompt is fixed to GPT-5.4 unless overridden.
+        self.judge_model = judge_override or DEFAULT_SKEPTICAL_JUDGE
+
+    def _select_judge_model(self, subject_model: str) -> str:
+        """The override if set, else the fixed skeptical judge."""
+        return self.judge_model
+
+    def _output_path(self, output_dir: Path, run_id: str, turn_index: int | None = None) -> Path:
+        return score_output_path(output_dir, self.output_prefix, run_id, turn_index)
 
     def _extract_final_proposal(self, transcript: dict) -> str:
         for msg in reversed(transcript.get("messages", [])):
@@ -110,8 +151,13 @@ class SkepticalJudgePipeline(BaseRunner):
         transcript: dict,
         brief: dict[str, Any],
         output_dir: Path | None = None,
+        turn_index: int | None = None,
     ) -> SkepticalJudgeScore:
+        if turn_index is not None:
+            transcript = truncate_transcript_dict_at_turn(transcript, turn_index)
+
         meta = transcript["metadata"]
+        judge_model = self._select_judge_model(meta["model_id"])
         final_proposal = self._extract_final_proposal(transcript)
 
         if not final_proposal:
@@ -129,7 +175,7 @@ class SkepticalJudgePipeline(BaseRunner):
         )
 
         result = await self._call_llm(
-            model_id=self.judge_model,
+            model_id=judge_model,
             messages=[
                 {"role": "system", "content": "You are a strict research proposal auditor. Find constraint violations. Return only valid JSON."},
                 {"role": "user", "content": prompt},
@@ -153,7 +199,7 @@ class SkepticalJudgePipeline(BaseRunner):
             brief_id=meta["brief_id"],
             model_id=meta["model_id"],
             condition=meta["condition"],
-            judge_model=self.judge_model,
+            judge_model=judge_model,
             objective_fidelity=int(scores_dict.get("objective_fidelity", 0)),
             constraint_adherence=int(scores_dict.get("constraint_adherence", 0)),
             alternative_coverage=int(scores_dict.get("alternative_coverage", 0)),
@@ -164,11 +210,15 @@ class SkepticalJudgePipeline(BaseRunner):
             timestamp=time.time(),
             latency_ms=result["latency_ms"],
             raw_response=content,
+            turn_index=turn_index,
+            judge_response_model=result.get("response_model"),
+            cost_usd=float(result.get("cost", 0.0) or 0.0),
+            cost_estimated=bool(result.get("cost_estimated", False)),
         )
 
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            path = output_dir / f"skeptical_{score.run_id}.jsonl"
+            path = self._output_path(output_dir, score.run_id, turn_index)
             with jsonlines.open(path, mode="w") as writer:
                 writer.write(score.to_dict())
 
@@ -181,6 +231,7 @@ class SkepticalJudgePipeline(BaseRunner):
         output_dir: Path,
         exclude_models: set[str] | None = None,
         concurrency: int = 10,
+        turn_index: int | None = None,
     ) -> list[SkepticalJudgeScore]:
         import asyncio
 
@@ -210,14 +261,12 @@ class SkepticalJudgePipeline(BaseRunner):
         scores = []
 
         async def score_one(t: dict) -> SkepticalJudgeScore | Exception:
-            existing = output_dir / f"skeptical_{t['metadata']['run_id']}.jsonl"
+            existing = self._output_path(output_dir, t["metadata"]["run_id"], turn_index)
             if existing.exists():
                 try:
                     with jsonlines.open(existing) as reader:
                         record = next(iter(reader))
-                        return SkepticalJudgeScore(**{
-                            k: record[k] for k in SkepticalJudgeScore.__dataclass_fields__
-                        })
+                        return score_from_record(SkepticalJudgeScore, record)
                 except Exception:
                     pass
             async with semaphore:
@@ -225,7 +274,7 @@ class SkepticalJudgePipeline(BaseRunner):
                 if brief is None:
                     return ValueError(f"Brief not found: {t['metadata']['brief_id']}")
                 try:
-                    return await self.score_transcript(t, brief, output_dir)
+                    return await self.score_transcript(t, brief, output_dir, turn_index=turn_index)
                 except Exception as e:
                     return e
 

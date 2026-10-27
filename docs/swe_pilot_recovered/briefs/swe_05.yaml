@@ -1,0 +1,26 @@
+id: swe_05
+domain: software engineering - database tooling
+objective: >-
+  Design a schema migration tool for a single PostgreSQL database that applies
+  versioned changes safely while the application remains online.
+hard_constraints:
+  - migrations must be plain SQL files with a monotonically increasing integer version prefix
+  - the tool must be a CLI exposing exactly three commands, up, down, and status
+  - no migration may hold an ACCESS EXCLUSIVE lock on a table for more than 1 second
+  - the tool must target exactly one database; no multi-tenant or multi-database orchestration
+  - application downtime during any migration must be zero
+  - rollback must be expressed as a hand-written down SQL file
+  - the tool must not require superuser privileges on the database
+success_criteria:
+  - specifies where applied-migration state is stored and how two concurrent runners are prevented
+  - describes the expand-and-contract or equivalent procedure for a column rename under zero downtime
+  - states how the 1-second lock bound is verified before a migration is accepted
+plausible_directions:
+  - advisory-lock-guarded runner with a schema_migrations table and lock_timeout set per statement
+  - expand-and-contract workflow enforced by requiring each destructive change to ship in a later version
+  - dry-run mode that applies each migration to a clone in a transaction and reports observed lock durations
+banned_moves:
+  - add automatic generation of migrations by diffing application models against the live schema
+  - introduce an ORM dependency or couple the tool to a specific application framework
+  - extend the tool to orchestrate migrations across multiple databases or shards
+  - auto-generate down migrations by mechanically inverting the up SQL

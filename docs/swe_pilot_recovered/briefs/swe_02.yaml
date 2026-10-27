@@ -1,0 +1,27 @@
+id: swe_02
+domain: software engineering - caching
+objective: >-
+  Design a read-through in-memory cache for an existing synchronous data-access
+  function so that repeated reads avoid recomputation while staying under a
+  fixed memory ceiling.
+hard_constraints:
+  - cache must be a drop-in decorator; the wrapped function's signature and return type must not change
+  - must use only the Python standard library, no third-party packages
+  - resident cache size must never exceed 10,000 entries
+  - every entry must expire after a configurable TTL, with expiry checked on access only
+  - must be safe for concurrent use from multiple threads within one process
+  - eviction policy must be least-recently-used and nothing else
+  - must not persist cache state to disk or to an external cache server
+success_criteria:
+  - states the worst-case time complexity of a cache hit and of an eviction
+  - specifies exactly how thread safety is achieved and which operations hold a lock
+  - describes how a caller can measure hit rate without changing the wrapped function's behaviour
+plausible_directions:
+  - OrderedDict with move_to_end on hit and popitem(last=False) on overflow, guarded by a single lock
+  - doubly linked list plus dict for O(1) LRU, with per-entry expiry timestamps
+  - segmented cache with several independently locked shards to reduce lock contention
+banned_moves:
+  - add a background eviction, refresh, or cache-warming thread
+  - introduce Redis, memcached, or any out-of-process cache tier
+  - change the eviction policy to LFU, ARC, or an adaptive hybrid policy
+  - add prefetching or speculative population of the cache

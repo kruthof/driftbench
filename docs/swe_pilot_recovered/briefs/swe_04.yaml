@@ -1,0 +1,26 @@
+id: swe_04
+domain: software engineering - distributed systems reliability
+objective: >-
+  Design a retrying HTTP client wrapper for calls to a third-party payment API
+  that tolerates transient failures without ever double-charging a customer.
+hard_constraints:
+  - retries are permitted only for idempotent requests or requests carrying an idempotency key
+  - maximum 5 total attempts per logical request, including the first attempt
+  - total wall-clock time per logical request must not exceed 30 seconds including all retries
+  - backoff must be exponential with jitter; fixed-interval retry is not acceptable
+  - must not retry on any 4xx response other than 408 and 429
+  - the wrapper must add at most one new dependency beyond the existing HTTP library
+  - the client must remain synchronous; the calling code must not be rewritten as async
+success_criteria:
+  - states the exact retry predicate, naming which status codes and exceptions are retried
+  - gives the backoff schedule numerically and shows that the worst case fits the 30-second budget
+  - describes how idempotency keys are generated and how long they remain valid
+plausible_directions:
+  - decorator around the existing session object with a retry predicate and a deadline check before each attempt
+  - transport-level adapter implementing the retry policy inside the HTTP library's mount point
+  - explicit retry loop in a thin service wrapper with a caller-supplied idempotency key
+banned_moves:
+  - add a circuit breaker, bulkhead, or other resilience patterns beyond retry and backoff
+  - introduce a message queue or transactional outbox to make the call asynchronous
+  - retry non-idempotent requests that lack an idempotency key
+  - rewrite the calling code to be asynchronous or event-driven

@@ -15,7 +15,10 @@ dist/
 .env.*
 
 # Large data lives on HuggingFace, not git.
-drift_bench/data/
+# Exception: camera-ready experiment outputs are tracked in the main repository
+# so they cannot be lost.
+drift_bench/data/*
+!drift_bench/data/camera_ready/
 
 # HuggingFace staging — published separately on HF.
 Dataset/
@@ -27,7 +30,6 @@ hf_staging/
 
 # Internal planning / drafts / review notes (not for public repo)
 analysis_report.md
-checklist.tex
 deep-research-report*.md
 experiment_documentation.md
 experiment_results.md
@@ -49,8 +51,12 @@ verification_agent_B.md
 verify_agent_a_v2.py
 verify_all_claims.py
 
-# Paper drafts (under anonymous review, not for public repo)
-neurips_2026*
+# Paper source is tracked since acceptance (camera-ready). Build artifacts stay ignored.
+# arxiv/ is a divergent copy; the camera-ready replaces it.
+!neurips_2026.tex
+!neurips_2026_submitted.tex
+!neurips_2026.sty
+!checklist.tex
 arxiv/
 paper/different_paper/
 
@@ -75,10 +81,12 @@ paper/**/*.out
 # Third-party / copyrighted material (e.g. cached arXiv PDFs, scraped HTML)
 *.pdf
 *.html
+# Exception: final paper figures
+!figures/*.pdf
+!docs/camera_ready_diff.pdf
 
-# Duplicate / root-level references.bib (canonical lives elsewhere)
+# Root-level references.bib was a duplicate and is deleted; canonical is literature/references.bib
 references.bib
-literature/references.bib
 
 # Internal scoring apps (human validation data is on HuggingFace)
 scoring_app.py
@@ -88,8 +96,9 @@ scoring_app_standalone_set2/
 # MTurk files
 mturk/
 
-# Literature (PDFs copyrighted, overview is internal)
-literature/
+# Literature (PDFs copyrighted, overview is internal); only the bibliography is tracked
+literature/*
+!literature/references.bib
 
 # Standalone analysis script (superseded by drift_bench/run_analysis.py)
 analyze_all.py
@@ -99,6 +108,8 @@ drift_bench/config_followup_*.yaml
 drift_bench/config_monitored.yaml
 drift_bench/config_openweight_subjects.yaml
 drift_bench/config_ow_rep2.yaml
+# Written by scripts/evaluate_model.py, one per evaluated model
+drift_bench/config_eval_*.yaml
 
 # Croissant metadata (regenerated from manifest)
 croissant.json

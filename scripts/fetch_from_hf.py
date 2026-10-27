@@ -13,7 +13,8 @@ against an HF snapshot without any code changes.
 
 Usage (from repo root):
 
-    python scripts/fetch_from_hf.py --repo-id <USER>/DriftBench
+    python scripts/fetch_from_hf.py                              # driftbench/DriftBench
+    python scripts/fetch_from_hf.py --repo-id <USER>/DriftBench  # a fork or mirror
     # or set DRIFTBENCH_HF_REPO instead.
 
 Pass --no-fetch to skip download (assumes the cache dir is already populated).
@@ -60,6 +61,14 @@ PATH_MAP: list[tuple[str, str]] = [
     ("followup_b/aggregated/all_scores.parquet",
      "drift_bench/data/followup_b/aggregated/all_scores.parquet"),
 
+    # Run summaries (read by the camera-ready modules failed_runs,
+    # corrections and sensitivity)
+    ("run_summary.json", "drift_bench/data/run_summary.json"),
+    ("openweight/run_summary.json", "drift_bench/data/openweight_subjects/run_summary.json"),
+    ("monitored/run_summary.json", "drift_bench/data/monitored/run_summary.json"),
+    ("followup_a/run_summary.json", "drift_bench/data/followup_a/run_summary.json"),
+    ("followup_b/run_summary.json", "drift_bench/data/followup_b/run_summary.json"),
+
     # Aggregated parquets (top-level)
     ("aggregated/all_scores.parquet", "drift_bench/data/aggregated/all_scores.parquet"),
     ("aggregated/main_scores.parquet", "drift_bench/data/aggregated/main_scores.parquet"),
@@ -68,6 +77,13 @@ PATH_MAP: list[tuple[str, str]] = [
 
     # Pre-computed analysis outputs
     ("analysis", "drift_bench/data/analysis"),
+
+    # Second-judge scorings
+    ("scores_skeptical", "drift_bench/data/scores_skeptical"),
+    ("openweight_judges", "drift_bench/data/openweight_judges"),
+
+    # Camera-ready experiments and analysis CSVs
+    ("camera_ready", "drift_bench/data/camera_ready"),
 
     # Human validation
     ("human_validation", "drift_bench/data/human_validation"),
@@ -91,8 +107,8 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument(
         "--repo-id",
-        default=os.environ.get("DRIFTBENCH_HF_REPO", "anonymous-driftbench/DriftBench"),
-        help="HuggingFace dataset repo id (default: anonymous-driftbench/DriftBench). "
+        default=os.environ.get("DRIFTBENCH_HF_REPO", "driftbench/DriftBench"),
+        help="HuggingFace dataset repo id (default: driftbench/DriftBench). "
              "Override via $DRIFTBENCH_HF_REPO or --repo-id.",
     )
     p.add_argument("--cache-dir", default=str(HF_CACHE_DIR),

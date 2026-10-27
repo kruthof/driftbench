@@ -19,6 +19,15 @@ import yaml
 
 from drift_bench.runners.base import BaseRunner
 from drift_bench.prompts.loader import render_template, render_brief_for_prompt
+from drift_bench.judges.judge import (
+    DEFAULT_CALIBRATION_PATH,
+    DEFAULT_RUBRICS_PATH,
+    load_calibration,
+    load_rubrics,
+    score_from_record,
+    score_output_path,
+    truncate_transcript_dict_at_turn,
+)
 
 
 @dataclass
@@ -39,6 +48,12 @@ class BlindJudgeScore:
     timestamp: float = 0.0
     judge_latency_ms: float = 0.0
     raw_response: str = ""
+    # Added for the camera-ready (X1, X2). Old records lack these keys.
+    turn_index: int | None = None
+    judge_response_model: str | None = None
+    cost_usd: float = 0.0
+    # True when cost_usd came from the config `pricing` fallback, not litellm.
+    cost_estimated: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -47,21 +62,36 @@ class BlindJudgeScore:
 class BlindJudgePipeline(BaseRunner):
     """Score proposals using brief + final proposal only (no transcript)."""
 
-    def __init__(self, config_path: Path | None = None):
-        super().__init__(config_path)
-        rubrics_path = Path(__file__).parent / "rubrics.yaml"
-        with open(rubrics_path) as f:
-            self.rubrics = yaml.safe_load(f)
-        calibration_path = Path(__file__).parent / "calibration.yaml"
-        with open(calibration_path) as f:
-            self.calibration = yaml.safe_load(f)
+    def __init__(
+        self,
+        config_path: Path | None = None,
+        judge_override: str | None = None,
+        output_prefix: str = "blind",
+        prompts_dir: Path | None = None,
+        rubrics_path: Path | None = None,
+        calibration_path: Path | None = None,
+    ):
+        super().__init__(config_path, prompts_dir=prompts_dir)
+        self.judge_override = judge_override
+        self.output_prefix = output_prefix
+        self.rubrics_path = Path(rubrics_path) if rubrics_path else DEFAULT_RUBRICS_PATH
+        self.calibration_path = (
+            Path(calibration_path) if calibration_path else DEFAULT_CALIBRATION_PATH
+        )
+        self.rubrics = load_rubrics(self.rubrics_path)
+        self.calibration = load_calibration(self.calibration_path)
 
     def _select_judge_model(self, subject_model: str) -> str:
-        """Select judge model using cross-family rule."""
+        """Select judge model: the override if set, else the cross-family rule."""
+        if self.judge_override:
+            return self.judge_override
         judges_config = self.config["models"]["judges"]
         if "anthropic" in subject_model:
             return judges_config["for_anthropic_runs"]
         return judges_config["default"]
+
+    def _output_path(self, output_dir: Path, run_id: str, turn_index: int | None = None) -> Path:
+        return score_output_path(output_dir, self.output_prefix, run_id, turn_index)
 
     def _extract_final_proposal(self, transcript: dict) -> str:
         """Extract the last assistant message (non-probe)."""
@@ -86,29 +116,35 @@ class BlindJudgePipeline(BaseRunner):
             )
         return "\n\n".join(examples)
 
+    def build_prompt(self, transcript: dict, brief: dict[str, Any]) -> str:
+        """Render the blind judge prompt. No API call."""
+        meta = transcript["metadata"]
+        final_proposal = self._extract_final_proposal(transcript)
+        if not final_proposal:
+            raise ValueError(f"No final proposal in {meta['run_id']}")
+        return render_template(
+            "judge_blind.j2",
+            prompts_dir=self.prompts_dir,
+            brief=render_brief_for_prompt(brief),
+            final_proposal=final_proposal,
+            calibration_examples=self._format_calibration_examples(),
+            rubrics=yaml.dump(self.rubrics, default_flow_style=False),
+        )
+
     async def score_transcript(
         self,
         transcript: dict,
         brief: dict[str, Any],
         output_dir: Path | None = None,
+        turn_index: int | None = None,
     ) -> BlindJudgeScore:
         """Score a single transcript using only brief + final proposal."""
+        if turn_index is not None:
+            transcript = truncate_transcript_dict_at_turn(transcript, turn_index)
+
         meta = transcript["metadata"]
         judge_model = self._select_judge_model(meta["model_id"])
-        brief_text = render_brief_for_prompt(brief)
-        final_proposal = self._extract_final_proposal(transcript)
-        calibration_text = self._format_calibration_examples()
-
-        if not final_proposal:
-            raise ValueError(f"No final proposal in {meta['run_id']}")
-
-        prompt = render_template(
-            "judge_blind.j2",
-            brief=brief_text,
-            final_proposal=final_proposal,
-            calibration_examples=calibration_text,
-            rubrics=yaml.dump(self.rubrics, default_flow_style=False),
-        )
+        prompt = self.build_prompt(transcript, brief)
 
         result = await self._call_llm(
             model_id=judge_model,
@@ -146,11 +182,15 @@ class BlindJudgePipeline(BaseRunner):
             timestamp=time.time(),
             judge_latency_ms=result["latency_ms"],
             raw_response=result["content"],
+            turn_index=turn_index,
+            judge_response_model=result.get("response_model"),
+            cost_usd=float(result.get("cost", 0.0) or 0.0),
+            cost_estimated=bool(result.get("cost_estimated", False)),
         )
 
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            path = output_dir / f"blind_{score.run_id}.jsonl"
+            path = self._output_path(output_dir, score.run_id, turn_index)
             with jsonlines.open(path, mode="w") as writer:
                 writer.write(score.to_dict())
 
@@ -162,6 +202,7 @@ class BlindJudgePipeline(BaseRunner):
         briefs_dir: Path,
         output_dir: Path,
         concurrency: int = 10,
+        turn_index: int | None = None,
     ) -> list[BlindJudgeScore]:
         """Score all transcripts with the blind judge."""
         import asyncio
@@ -189,15 +230,12 @@ class BlindJudgePipeline(BaseRunner):
 
         async def score_one(t: dict) -> BlindJudgeScore | Exception:
             # Resumability
-            existing = output_dir / f"blind_{t['metadata']['run_id']}.jsonl"
+            existing = self._output_path(output_dir, t["metadata"]["run_id"], turn_index)
             if existing.exists():
                 try:
                     with jsonlines.open(existing) as reader:
                         record = next(iter(reader))
-                        return BlindJudgeScore(**{
-                            k: record[k]
-                            for k in BlindJudgeScore.__dataclass_fields__
-                        })
+                        return score_from_record(BlindJudgeScore, record)
                 except Exception:
                     pass
             async with semaphore:
@@ -206,7 +244,7 @@ class BlindJudgePipeline(BaseRunner):
                 if brief is None:
                     return ValueError(f"Brief not found: {brief_id}")
                 try:
-                    return await self.score_transcript(t, brief, output_dir)
+                    return await self.score_transcript(t, brief, output_dir, turn_index=turn_index)
                 except Exception as e:
                     return e
 

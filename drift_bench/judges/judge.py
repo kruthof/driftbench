@@ -15,6 +15,121 @@ from drift_bench.runners.base import BaseRunner, Message, RunMetadata, Transcrip
 from drift_bench.prompts.loader import render_template, render_brief_for_prompt
 
 
+DEFAULT_RUBRICS_PATH = Path(__file__).parent / "rubrics.yaml"
+DEFAULT_CALIBRATION_PATH = Path(__file__).parent / "calibration.yaml"
+
+
+def load_rubrics(rubrics_path: Path | None = None) -> dict[str, Any]:
+    """Load the rubric YAML. Defaults to drift_bench/judges/rubrics.yaml."""
+    with open(rubrics_path or DEFAULT_RUBRICS_PATH) as f:
+        return yaml.safe_load(f)
+
+
+def load_calibration(calibration_path: Path | None = None) -> dict[str, Any]:
+    """Load the calibration YAML. Defaults to drift_bench/judges/calibration.yaml."""
+    with open(calibration_path or DEFAULT_CALIBRATION_PATH) as f:
+        return yaml.safe_load(f)
+
+
+def score_from_record(cls, record: dict[str, Any]):
+    """Rebuild a score dataclass from a stored record.
+
+    Keys the dataclass does not know are ignored. Optional fields that
+    the record lacks (written by an older version) take their defaults.
+    A missing required field raises TypeError.
+    """
+    return cls(**{k: v for k, v in record.items() if k in cls.__dataclass_fields__})
+
+
+def _is_probe(msg: Any) -> bool:
+    if isinstance(msg, dict):
+        return bool(msg.get("is_probe", False))
+    return bool(getattr(msg, "is_probe", False))
+
+
+def _role(msg: Any) -> str:
+    if isinstance(msg, dict):
+        return msg.get("role", "")
+    return getattr(msg, "role", "")
+
+
+def truncate_messages_at_turn(messages: list, turn_index: int) -> list:
+    """Keep messages up to and including the k-th non-probe assistant message.
+
+    Turn k is the k-th assistant message that is not a probe (1-based).
+    k counts ALL non-probe assistant messages. In checkpointed_pressure the
+    two checkpoint replies count too, so k runs 1..8 there and the probes
+    sit after assistant messages 1, 2, 4, 5 and 7. In the monitored
+    condition, replies to monitor interventions count as well.
+    Probe messages that follow the kept assistant message are dropped;
+    probe messages before it are kept and filtered later as usual.
+    Works on Message objects and on raw transcript dicts.
+    Raises ValueError if the transcript has fewer than k assistant turns.
+    """
+    if turn_index < 1:
+        raise ValueError(f"turn_index must be >= 1, got {turn_index}")
+    seen = 0
+    for i, msg in enumerate(messages):
+        if _role(msg) == "assistant" and not _is_probe(msg):
+            seen += 1
+            if seen == turn_index:
+                return list(messages[: i + 1])
+    raise ValueError(
+        f"turn_index {turn_index} out of range: transcript has {seen} assistant turns"
+    )
+
+
+def truncate_transcript_at_turn(transcript: Transcript, turn_index: int) -> Transcript:
+    """Return a copy of a Transcript truncated after assistant turn k."""
+    return Transcript(
+        metadata=transcript.metadata,
+        messages=truncate_messages_at_turn(transcript.messages, turn_index),
+    )
+
+
+def truncate_transcript_dict_at_turn(transcript: dict, turn_index: int) -> dict:
+    """Return a copy of a raw transcript dict truncated after assistant turn k."""
+    out = dict(transcript)
+    out["messages"] = truncate_messages_at_turn(transcript.get("messages", []), turn_index)
+    return out
+
+
+def score_output_path(output_dir: Path, prefix: str, run_id: str, turn_index: int | None) -> Path:
+    """Build `<prefix>_<run_id>.jsonl` or `<prefix>_t<K>_<run_id>.jsonl`."""
+    if turn_index is None:
+        return output_dir / f"{prefix}_{run_id}.jsonl"
+    return output_dir / f"{prefix}_t{turn_index}_{run_id}.jsonl"
+
+
+
+def first_json_object(text: str) -> dict:
+    r"""Return the first complete JSON object in ``text``.
+
+    Judges sometimes append prose after a valid object. A greedy
+    ``\{.*\}`` regex keeps that prose and ``json.loads`` then fails
+    with "Extra data". This scans from each ``{`` and decodes the first
+    object that parses. Raises ``ValueError`` when none does.
+
+    A judge that revises itself and emits a second object after the
+    first keeps the FIRST object, which may be the retracted draft.
+    This happened once in E4 (run e301452993b4, Opus structured judge:
+    draft, a "Wait, let me reconsider" paragraph, then a final object).
+    That record was overridden by hand to the final object and carries a
+    ``manual_override`` field; see the E4 README.
+    """
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    while start != -1:
+        try:
+            obj, _end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            start = text.find("{", start + 1)
+            continue
+        if isinstance(obj, dict):
+            return obj
+        start = text.find("{", start + 1)
+    raise ValueError(f"Judge returned non-JSON: {text[:200]}")
+
 @dataclass
 class JudgeScore:
     """Structured score from the judge."""
@@ -33,6 +148,12 @@ class JudgeScore:
     timestamp: float = 0.0
     judge_latency_ms: float = 0.0
     raw_response: str = ""
+    # Added for the camera-ready (X1, X2). Old records lack these keys.
+    turn_index: int | None = None
+    judge_response_model: str | None = None
+    cost_usd: float = 0.0
+    # True when cost_usd came from the config `pricing` fallback, not litellm.
+    cost_estimated: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -41,21 +162,44 @@ class JudgeScore:
 class JudgePipeline(BaseRunner):
     """Score transcripts using LLM-as-judge with cross-family assignment."""
 
-    def __init__(self, config_path: Path | None = None):
-        super().__init__(config_path)
-        rubrics_path = Path(__file__).parent / "rubrics.yaml"
-        with open(rubrics_path) as f:
-            self.rubrics = yaml.safe_load(f)
-        calibration_path = Path(__file__).parent / "calibration.yaml"
-        with open(calibration_path) as f:
-            self.calibration = yaml.safe_load(f)
+    def __init__(
+        self,
+        config_path: Path | None = None,
+        judge_override: str | None = None,
+        output_prefix: str = "judge",
+        prompts_dir: Path | None = None,
+        rubrics_path: Path | None = None,
+        calibration_path: Path | None = None,
+    ):
+        """Build the judge.
+
+        judge_override: model id used for every run, regardless of the
+            subject family. None keeps the config-based cross-family routing.
+        output_prefix: file prefix for score files (default ``judge``).
+        prompts_dir, rubrics_path, calibration_path: override the built-in
+            prompt directory and rubric/calibration YAML files.
+        """
+        super().__init__(config_path, prompts_dir=prompts_dir)
+        self.judge_override = judge_override
+        self.output_prefix = output_prefix
+        self.rubrics_path = Path(rubrics_path) if rubrics_path else DEFAULT_RUBRICS_PATH
+        self.calibration_path = (
+            Path(calibration_path) if calibration_path else DEFAULT_CALIBRATION_PATH
+        )
+        self.rubrics = load_rubrics(self.rubrics_path)
+        self.calibration = load_calibration(self.calibration_path)
 
     def _select_judge_model(self, subject_model: str) -> str:
-        """Select judge model using cross-family rule."""
+        """Select judge model: the override if set, else the cross-family rule."""
+        if self.judge_override:
+            return self.judge_override
         judges_config = self.config["models"]["judges"]
         if "anthropic" in subject_model:
             return judges_config["for_anthropic_runs"]
         return judges_config["default"]
+
+    def _output_path(self, output_dir: Path, run_id: str, turn_index: int | None = None) -> Path:
+        return score_output_path(output_dir, self.output_prefix, run_id, turn_index)
 
     def _extract_final_proposal(self, transcript: Transcript) -> str:
         """Extract the last assistant message as the final proposal."""
@@ -99,27 +243,40 @@ class JudgePipeline(BaseRunner):
             )
         return "\n\n".join(examples)
 
-    async def score_transcript(
-        self,
-        transcript: Transcript,
-        brief: dict[str, Any],
-        output_dir: Path | None = None,
-    ) -> JudgeScore:
-        """Score a single transcript."""
-        judge_model = self._select_judge_model(transcript.metadata.model_id)
+    def build_prompt(self, transcript: Transcript, brief: dict[str, Any]) -> str:
+        """Render the judge prompt for a transcript. No API call."""
         brief_text = render_brief_for_prompt(brief)
         transcript_text = self._format_transcript_for_judge(transcript)
         final_proposal = self._extract_final_proposal(transcript)
         calibration_text = self._format_calibration_examples()
-
-        prompt = render_template(
+        return render_template(
             "judge.j2",
+            prompts_dir=self.prompts_dir,
             brief=brief_text,
             transcript=transcript_text,
             final_proposal=final_proposal,
             calibration_examples=calibration_text,
             rubrics=yaml.dump(self.rubrics, default_flow_style=False),
         )
+
+    async def score_transcript(
+        self,
+        transcript: Transcript,
+        brief: dict[str, Any],
+        output_dir: Path | None = None,
+        turn_index: int | None = None,
+    ) -> JudgeScore:
+        """Score a single transcript.
+
+        turn_index: when set, score the transcript truncated after the
+            k-th non-probe assistant message. The record carries
+            ``turn_index`` and the file name gets a ``_t<K>`` infix.
+        """
+        if turn_index is not None:
+            transcript = truncate_transcript_at_turn(transcript, turn_index)
+
+        judge_model = self._select_judge_model(transcript.metadata.model_id)
+        prompt = self.build_prompt(transcript, brief)
 
         result = await self._call_llm(
             model_id=judge_model,
@@ -135,11 +292,7 @@ class JudgePipeline(BaseRunner):
         try:
             scores_dict = json.loads(result["content"])
         except json.JSONDecodeError:
-            match = re.search(r"\{.*\}", result["content"], re.DOTALL)
-            if match:
-                scores_dict = json.loads(match.group())
-            else:
-                raise ValueError(f"Judge returned non-JSON: {result['content'][:200]}")
+            scores_dict = first_json_object(result["content"])
 
         score = JudgeScore(
             run_id=transcript.metadata.run_id,
@@ -157,11 +310,15 @@ class JudgePipeline(BaseRunner):
             timestamp=time.time(),
             judge_latency_ms=result["latency_ms"],
             raw_response=result["content"],
+            turn_index=turn_index,
+            judge_response_model=result.get("response_model"),
+            cost_usd=float(result.get("cost", 0.0) or 0.0),
+            cost_estimated=bool(result.get("cost_estimated", False)),
         )
 
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            path = output_dir / f"judge_{score.run_id}.jsonl"
+            path = self._output_path(output_dir, score.run_id, turn_index)
             with jsonlines.open(path, mode="w") as writer:
                 writer.write(score.to_dict())
 
@@ -173,6 +330,7 @@ class JudgePipeline(BaseRunner):
         briefs: list[dict[str, Any]],
         output_dir: Path,
         concurrency: int = 5,
+        turn_index: int | None = None,
     ) -> list[JudgeScore]:
         """Score a list of transcripts."""
         import asyncio
@@ -184,18 +342,18 @@ class JudgePipeline(BaseRunner):
         async def score_one(t: Transcript) -> JudgeScore | Exception:
             # Resumability: skip if score file already exists
             if output_dir:
-                existing = output_dir / f"judge_{t.metadata.run_id}.jsonl"
+                existing = self._output_path(output_dir, t.metadata.run_id, turn_index)
                 if existing.exists():
                     try:
                         with jsonlines.open(existing) as reader:
                             record = next(iter(reader))
-                            return JudgeScore(**{k: record[k] for k in JudgeScore.__dataclass_fields__})
+                            return score_from_record(JudgeScore, record)
                     except Exception:
                         pass  # re-score if file is corrupt
             async with semaphore:
                 brief = briefs_by_id[t.metadata.brief_id]
                 try:
-                    return await self.score_transcript(t, brief, output_dir)
+                    return await self.score_transcript(t, brief, output_dir, turn_index=turn_index)
                 except Exception as e:
                     return e
 

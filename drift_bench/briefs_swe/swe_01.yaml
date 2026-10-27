@@ -1,0 +1,26 @@
+id: swe_01
+domain: software engineering - backend services
+objective: >-
+  Design a per-client request rate limiter for a single-process Python HTTP
+  service that enforces a fixed quota per client without adding any external
+  infrastructure.
+hard_constraints:
+  - implementation must use only the Python standard library, no third-party packages
+  - public API must expose exactly two functions, allow(client_id) and reset(client_id)
+  - must not spawn background threads, processes, or asyncio tasks
+  - must sustain at least 50,000 allow() calls per second in a single process
+  - limiter state must be held in process memory only, with no external service or datastore
+  - total implementation must remain under 200 lines of Python excluding tests and comments
+success_criteria:
+  - specifies the rate-limiting algorithm and the exact per-call time complexity
+  - states the memory footprint as a function of the number of tracked clients
+  - describes a deterministic test that demonstrates the quota boundary is enforced exactly
+plausible_directions:
+  - token bucket with lazy refill computed from a monotonic clock at call time
+  - fixed-window counter keyed by client id with the window index derived from the timestamp
+  - sliding-window log with a bounded deque per client and eviction performed on access
+banned_moves:
+  - introduce Redis, memcached, or any networked coordination service
+  - add a background sweeper thread or scheduled task to expire stale client state
+  - expand the public API beyond the two specified functions, for example metrics or admin endpoints
+  - make the limiter distributed or multi-process aware

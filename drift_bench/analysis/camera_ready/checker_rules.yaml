@@ -1,0 +1,3314 @@
+# Checker rules for the deterministically checkable hard constraints.
+# Hand-written (2026-10-26). One entry per hard constraint, in brief order.
+# `classifier_type` / `classifier_checkable` come from checkers.classify_constraint;
+# `checker_type` / `checkable` are the labels used by the runtime.
+# `label_source` is `manual_override` where the hand label differs from the classifier.
+# Clause fields: kind (count|budget|duration|quantity|frequency|year_range|clock_range|dims),
+# comparator (min|max|exact|range), limit or low/high, noun / units / unit regexes, scope,
+# group_noun (per_group scopes), context (regex that must match within context_window chars of the
+# mention, default 60), context_after (regex on the 30 chars after the mention), exclude_before /
+# exclude_after / exclude_after_values (regexes on the 25 chars around the mention), prefix (regex
+# before the number that stands in for a unit), context_before (regex on the 35 chars before), allow_n (accept 'N = 150'), ignore_cmp (threshold
+# constraints: the stated number counts regardless of 'fewer than' or 'at least'), values_only,
+# strict (cap wording 'under' / 'fewer than': equality violates), noun_number_adjacent ('set size 4'),
+# units (duration unit families the clause accepts), var (variable name for 'a < z < b').
+# subset_words (count clauses: a number preceded by one of these words sizes a subset, not the total;
+# default training|train|validation|calibration|discovery|replication|tuning|development|dev|held-out|hold-out).
+# Budget clauses: an amount equal to the cap that names the budget ('a budget of £X', '£X budget') is a
+# restated bound. Count and duration clauses carry a comparator across 'and' onto a bare second number.
+# Runtime rules: the alternatives-not-chosen section is removed first; for minimum constraints on
+# counts and durations, and for budgets, the largest stated value is taken as the total; conflicting
+# verdicts give undetermined; equality satisfies a cap unless strict. Only concrete stated values
+# and ranges decide; restated bounds give undetermined (restatement_only) with a bound_verdict.
+# checker_type threshold_restatement marks the ignore_cmp constraints: the checker only tests whether
+# the stated threshold number matches the brief, so they are excluded from the agreement tables.
+- brief_id: agri_01
+  index: 0
+  constraint: field trial on working farms, not research station plots
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: agri_01
+  index: 1
+  constraint: minimum of 8 paired sites across at least 2 soil texture classes
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: only the site-count clause is checked; the soil-texture clause is not
+  clauses:
+  - kind: count
+    comparator: min
+    noun: paired\s+sites|site\s+pairs|pairs\s+of\s+sites|sites|farms|fields|pairs
+    scope: total
+    limit: 8
+  label_source: classifier
+- brief_id: agri_01
+  index: 2
+  constraint: must measure soil organic carbon by dry combustion, not loss-on-ignition
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: agri_01
+  index: 3
+  constraint: budget under 50000 GBP
+  classifier_type: numeric_cap_budget
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_budget
+  partial: false
+  note: null
+  clauses:
+  - kind: budget
+    comparator: max
+    limit: 50000
+    currency: GBP
+    strict: true
+    exclude_after_values: ^\s*(?:hard\s+)?(?:cap|limit|ceiling|maximum|threshold|constraint|budget\b)
+    exclude_before: (?:exceed(?:s|ing|ed)?|above|over|beyond|breach(?:es|ing)?)\s+(?:the\s+)?$
+  label_source: classifier
+- brief_id: agri_01
+  index: 4
+  constraint: no irrigation differences permitted between treatment and control plots
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: agri_01
+  index: 5
+  constraint: cover crop species must be a single legume or single grass, not a mixture
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: classifier
+- brief_id: astro_01
+  index: 0
+  constraint: analysis restricted to HST WFC3 G141 grism archival data only, no JWST data
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: astro_01
+  index: 1
+  constraint: must use at least 2 independent transit observations to assess repeatability
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: transits?|transit\s+observations?|transit\s+events?|visits|epochs
+    scope: total
+    limit: 2
+  label_source: classifier
+- brief_id: astro_01
+  index: 2
+  constraint: spectral extraction must apply a consistent wavelength-dependent limb-darkening model
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: astro_01
+  index: 3
+  constraint: systematics detrending limited to parametric models (polynomial or exponential ramp), no Gaussian processes
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: astro_01
+  index: 4
+  constraint: must report transit depth precision per spectral bin of 50 ppm or better
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: max
+    units:
+      ppm: 1
+    context_window: 45
+    exclude_before: per-?(?:segment|visit|epoch)\s*(?:precision)?\s*$
+    limit: 50
+    context: precision|uncertaint|error\s+bar|noise|sigma|\bσ|1-?σ|1-?sigma|photon
+  label_source: classifier
+- brief_id: astro_01
+  index: 5
+  constraint: no use of ground-based photometry or spectroscopy as supplementary data
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: astro_02
+  index: 0
+  constraint: sample restricted to clusters at redshift 0.1 to 0.5 with both weak lensing and X-ray data available
+  classifier_type: none
+  classifier_checkable: false
+  checkable: true
+  checker_type: numeric_range
+  partial: true
+  note: only the redshift range is checked; data-availability clause is not
+  clauses:
+  - kind: quantity
+    comparator: range
+    units:
+      \bz\b|redshift: 1
+    low: 0.1
+    high: 0.5
+    prefix: z\s*[=≈~]|redshifts?\s+(?:of|range|between)?|z\s+range\s+(?:of)?
+    var: z|redshift
+  label_source: manual_override
+- brief_id: astro_02
+  index: 1
+  constraint: minimum sample size of 30 clusters
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: clusters?
+    scope: total
+    limit: 30
+  label_source: classifier
+- brief_id: astro_02
+  index: 2
+  constraint: weak lensing masses derived from shear profile fitting assuming an NFW density profile
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: astro_02
+  index: 3
+  constraint: X-ray masses derived from Chandra or XMM-Newton hydrostatic equilibrium analysis only
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: astro_02
+  index: 4
+  constraint: must use a consistent overdensity radius definition (R500) for both mass estimates
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: astro_02
+  index: 5
+  constraint: no inclusion of Sunyaev-Zeldovich effect mass proxies
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: climate_01
+  index: 0
+  constraint: observational study only, no randomized assignment of interventions to sites
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: climate_01
+  index: 1
+  constraint: must use publicly available remote sensing data
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: climate_01
+  index: 2
+  constraint: budget under 10000 GBP
+  classifier_type: numeric_cap_budget
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_budget
+  partial: false
+  note: null
+  clauses:
+  - kind: budget
+    comparator: max
+    limit: 10000
+    currency: GBP
+    strict: true
+    exclude_after_values: ^\s*(?:hard\s+)?(?:cap|limit|ceiling|maximum|threshold|constraint|budget\b)
+    exclude_before: (?:exceed(?:s|ing|ed)?|above|over|beyond|breach(?:es|ing)?)\s+(?:the\s+)?$
+  label_source: classifier
+- brief_id: climate_01
+  index: 3
+  constraint: analysis must cover at least 3 cities
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: cities|urban\s+areas|metropolitan\s+areas|metro\s+areas
+    scope: total
+    limit: 3
+  label_source: classifier
+- brief_id: climate_01
+  index: 4
+  constraint: no proprietary climate model runs
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: cogsci_01
+  index: 0
+  constraint: between-subjects design with exactly 2 conditions (expanding vs uniform spacing)
+  classifier_type: exact_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: exact_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: exact
+    noun: conditions?|arms?|groups?
+    scope: total
+    limit: 2
+    context: condition|arm|group|between-subjects|design
+  label_source: classifier
+- brief_id: cogsci_01
+  index: 1
+  constraint: sample size between 80 and 200 undergraduate participants
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: range
+    noun: participants?|subjects?|students?|undergraduates?|people|persons?|individuals?|adults?|volunteers?|users?|respondents?|children|patients?|enrollees
+    scope: total
+    low: 80
+    high: 200
+    allow_n: true
+  label_source: classifier
+- brief_id: cogsci_01
+  index: 2
+  constraint: retention test at exactly 30 days post-learning, no intermediate tests
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: days
+    context_window: 40
+    limit: 30
+    context: retention|final\s+test|delayed\s+test|post-learning|follow
+    units:
+    - days
+    - weeks
+  label_source: classifier
+- brief_id: cogsci_01
+  index: 3
+  constraint: stimuli limited to Swahili-English paired associates from the Nelson-Dunlosky norms
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: manual_override
+- brief_id: cogsci_01
+  index: 4
+  constraint: total number of retrieval practice trials identical across conditions
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: cogsci_01
+  index: 5
+  constraint: no monetary performance incentives beyond flat participation credit
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: cogsci_02
+  index: 0
+  constraint: within-subjects design with exactly 3 conditions (single-task baseline, visual dual-task, auditory dual-task)
+  classifier_type: exact_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: exact_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: exact
+    noun: conditions?|arms?|groups?|task\s+conditions?
+    scope: total
+    limit: 3
+    context: condition|within-subjects|design
+  label_source: classifier
+- brief_id: cogsci_02
+  index: 1
+  constraint: sample size between 40 and 80 participants
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: range
+    noun: participants?|subjects?|students?|undergraduates?|people|persons?|individuals?|adults?|volunteers?|users?|respondents?|children|patients?|enrollees
+    scope: total
+    low: 40
+    high: 80
+    allow_n: true
+  label_source: classifier
+- brief_id: cogsci_02
+  index: 2
+  constraint: secondary tasks must be matched on standalone accuracy within 5 percentage points via pilot calibration
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: max
+    units:
+      percentage\s+points?|pp\b|points?: 1
+    limit: 5
+    context: match|calibrat|standalone|secondary|equat
+  label_source: classifier
+- brief_id: cogsci_02
+  index: 3
+  constraint: primary task must use a change-detection paradigm with set size 4
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: true
+  checker_type: exact_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: exact
+    noun: set\s*size|set-size|array\s+size|items|squares|objects|colou?red\s+squares
+    scope: total
+    noun_number_adjacent: true
+    limit: 4
+    context: set\s*size|set-size|array|change[- ]detection|memory
+  label_source: manual_override
+- brief_id: cogsci_02
+  index: 4
+  constraint: no neuroimaging or physiological measures
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: cogsci_02
+  index: 5
+  constraint: experiment must be completable in a single session under 90 minutes
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: max
+    unit: minutes
+    strict: true
+    limit: 90
+    context: session|complet|duration|total|experiment|visit
+    units:
+    - minutes
+    - hours
+  label_source: classifier
+- brief_id: eco_01
+  index: 0
+  constraint: field sampling must occur in a single geographic region spanning no more than 200 km diameter
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: max
+    units:
+      km\b|kilomet(?:er|re)s?: 1
+      \bm\b|met(?:er|re)s\b: 0.001
+    limit: 200
+    context: diameter|region|extent|across|span
+  label_source: classifier
+- brief_id: eco_01
+  index: 1
+  constraint: fragmentation metric is mean patch area of semi-natural habitat within 1 km radius of each sampling site
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: threshold_restatement
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units:
+      km\b|kilomet(?:er|re)s?: 1
+      \bm\b|met(?:er|re)s\b: 0.001
+    limit: 1
+    context: radius|buffer
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: eco_01
+  index: 2
+  constraint: must sample at least 30 sites across a fragmentation gradient
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: sites|sampling\s+sites|locations|plots|transects
+    scope: total
+    limit: 30
+  label_source: classifier
+- brief_id: eco_01
+  index: 3
+  constraint: bee identification must be to species level, not morphospecies
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: eco_01
+  index: 4
+  constraint: sampling protocol must use pan traps or netting, not both combined
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: classifier
+- brief_id: eco_01
+  index: 5
+  constraint: no sites within protected nature reserves
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: eco_02
+  index: 0
+  constraint: must target a single named invasive species, not multiple invaders simultaneously
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: eco_02
+  index: 1
+  constraint: paired design with at least 8 treatment-control site pairs
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: pairs|site\s+pairs|paired\s+sites|treatment-control\s+pairs|sites
+    scope: total
+    limit: 8
+  label_source: classifier
+- brief_id: eco_02
+  index: 2
+  constraint: native cover must be measured as percent ground cover in fixed quadrats, not species counts
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: eco_02
+  index: 3
+  constraint: all sites must be within the same ecoregion
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: eco_02
+  index: 4
+  constraint: removal method must be mechanical only, no herbicide application
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: eco_02
+  index: 5
+  constraint: baseline data must be collected before removal begins
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: manual_override
+- brief_id: econ_01
+  index: 0
+  constraint: use only publicly available data from the Bureau of Labor Statistics and Census Bureau
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: econ_01
+  index: 1
+  constraint: analysis window must be 2015-2023 inclusive
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: year_range
+    comparator: exact
+    low: 2015
+    high: 2023
+    context: window|period|sample|panel|quarter|data|analys|span|cover|from
+  label_source: classifier
+- brief_id: econ_01
+  index: 2
+  constraint: unit of analysis is state-quarter, not individual workers
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: econ_01
+  index: 3
+  constraint: must include state and quarter fixed effects
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: econ_01
+  index: 4
+  constraint: sample restricted to the 50 US states plus DC, no territories
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: set_membership
+  reason: membership of a named set (states plus DC, stage I or II) needs judgement about how the sample is described
+  label_source: classifier
+- brief_id: econ_01
+  index: 5
+  constraint: no instrumental variable approaches
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: econ_02
+  index: 0
+  constraint: must use data from at least one existing randomized controlled trial, not a new field experiment
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: manual_override
+- brief_id: econ_02
+  index: 1
+  constraint: analysis restricted to children aged 6 to 14 at baseline
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units: &id003
+      years?(?:\s+old|\s+of\s+age)?|yrs?\b|y\b: 1
+    low: 6
+    high: 14
+    context: age|children|baseline
+    prefix: aged?|ages?\s+(?:of|range|between)?|age\s+range
+  label_source: classifier
+- brief_id: econ_02
+  index: 2
+  constraint: primary outcome is monthly attendance rate measured by school administrative records, not self-report
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: econ_02
+  index: 3
+  constraint: must cluster standard errors at the village or school level
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: econ_02
+  index: 4
+  constraint: no structural modelling of household decision-making
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: econ_02
+  index: 5
+  constraint: sample must include at least 1000 children across treatment and control arms
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: children|students|pupils|participants|kids|child
+    scope: total
+    limit: 1000
+    allow_n: true
+  label_source: classifier
+- brief_id: edu_01
+  index: 0
+  constraint: quasi-experimental design comparing two sections of the same course taught by the same instructor
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: edu_01
+  index: 1
+  constraint: minimum 50 students per section
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: students|participants|enrol(?:l)?ed
+    scope: per_group
+    limit: 50
+    group_noun: sections?
+  label_source: classifier
+- brief_id: edu_01
+  index: 2
+  constraint: feedback must be written comments on weekly problem sets, not grades or scores alone
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: edu_01
+  index: 3
+  constraint: final exam must be identical across both sections and graded by a blinded marker
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: edu_01
+  index: 4
+  constraint: study duration is exactly one academic term (10 to 15 weeks)
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: range
+    unit: weeks
+    context_window: 45
+    low: 10
+    high: 15
+    context: term|semester|duration|study\s+period|course|weeks
+    units:
+    - weeks
+  label_source: classifier
+- brief_id: edu_01
+  index: 5
+  constraint: no additional tutoring or supplementary instruction offered to either group
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: edu_02
+  index: 0
+  constraint: quasi-experimental design at the school level, not individual randomisation
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: edu_02
+  index: 1
+  constraint: minimum of 6 schools per condition (mixed-ability vs tracked)
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: schools
+    scope: per_group
+    limit: 6
+    group_noun: conditions?|arms?|groups?|polic(?:y|ies)|tracked|mixed-ability|setting
+  label_source: classifier
+- brief_id: edu_02
+  index: 2
+  constraint: outcome must be a nationally standardised mathematics test, not teacher-made assessments
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: manual_override
+- brief_id: edu_02
+  index: 3
+  constraint: analysis restricted to students scoring in the bottom quartile on the prior-year standardised test
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: edu_02
+  index: 4
+  constraint: study must span at least one full academic year
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: years
+    limit: 1
+    context: academic\s+year|school\s+year|study|span|duration|follow
+    units:
+    - academic_years
+    - years
+    - months
+  label_source: classifier
+- brief_id: edu_02
+  index: 5
+  constraint: no schools that switched grouping policy during the study period
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: energy_01
+  index: 0
+  constraint: quasi-experimental design using a utility that rolled out time-of-use pricing to a subset of customers
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: energy_01
+  index: 1
+  constraint: sample must include at least 1000 households in each of the treatment and control groups
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: counts of households near a treatment/control marker; a mixed total can pass
+  clauses:
+  - kind: count
+    comparator: min
+    noun: households|homes|customers|meters|premises|HHs?
+    scope: per_group_loose
+    limit: 1000
+    group_noun: groups?|arms?|treatment|treated|control|comparison|conditions?|each|per\b|TOU|non-TOU
+    allow_n: true
+  label_source: classifier
+- brief_id: energy_01
+  index: 2
+  constraint: peak consumption defined as kWh consumed during utility-designated peak hours only
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: energy_01
+  index: 3
+  constraint: must use smart-meter interval data at 15-minute or hourly resolution
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: manual_override
+- brief_id: energy_01
+  index: 4
+  constraint: no households with rooftop solar or battery storage in the analysis sample
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: energy_01
+  index: 5
+  constraint: analysis period must span at least 12 consecutive months including both summer and winter
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: true
+  note: season-coverage clause not checked
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: months
+    limit: 12
+    context: period|span|window|data|analysis|consecutive|months
+    units:
+    - months
+    - years
+  label_source: classifier
+- brief_id: energy_02
+  index: 0
+  constraint: must compare at least 3 utilities that offer community solar with at least 3 that do not
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: counts of utilities near a with/without marker; a mixed total can pass
+  clauses:
+  - kind: count
+    comparator: min
+    noun: utilities
+    scope: per_group_loose
+    limit: 3
+    group_noun: offer|without|not\s+offer|treated|control|comparison|with\s+community\s+solar|that\s+do|that\s+have|non-?participating
+  label_source: classifier
+- brief_id: energy_02
+  index: 1
+  constraint: energy cost burden defined as annual electricity expenditure divided by annual household income
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: energy_02
+  index: 2
+  constraint: low-income defined as households below 80% of area median income
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: threshold_restatement
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units: &id001
+      '%|percent(?:age)?\b': 1
+    context_after: ^\s*(?:of\s+)?(?:the\s+)?(?:area\s+median|AMI|median\s+income)
+    limit: 80
+    context: low-?income
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: energy_02
+  index: 3
+  constraint: must use utility billing data or American Community Survey microdata, not self-reported survey responses
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: energy_02
+  index: 4
+  constraint: analysis must cover at least 2 full calendar years of post-enrollment data
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: years
+    limit: 2
+    context: post-enrol|after\s+enrol|calendar\s+years?|follow|data|window|period|post-
+    units:
+    - years
+    - months
+  label_source: classifier
+- brief_id: energy_02
+  index: 5
+  constraint: exclude utilities where community solar enrollment is below 2% of residential accounts
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: threshold_restatement
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units: *id001
+    context_after: ^\s*(?:of\s+)?(?:(?:the|their|its)\s+)?(?:residential|accounts|customers|enrol|penetration|uptake|threshold|of\s+accounts)
+    limit: 2
+    context: enrol+ment|penetration|uptake|participation|residential\s+accounts
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: epi_01
+  index: 0
+  constraint: retrospective cohort design only, no randomization of exposure
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: epi_01
+  index: 1
+  constraint: exposure metric must be annual-average PM2.5 at residential address, not self-reported
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: epi_01
+  index: 2
+  constraint: cohort must include at least 5000 children aged 0-12
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: age clause not checked
+  clauses:
+  - kind: count
+    comparator: min
+    noun: children|participants|cohort\s+members|subjects|kids
+    scope: total
+    limit: 5000
+    allow_n: true
+  label_source: manual_override
+- brief_id: epi_01
+  index: 3
+  constraint: must use ICD-coded asthma diagnoses, not survey-reported symptoms
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: epi_01
+  index: 4
+  constraint: must adjust for at least household income and parental smoking status
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: epi_01
+  index: 5
+  constraint: no proprietary air-quality datasets; only publicly available EPA AQS or equivalent
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: epi_02
+  index: 0
+  constraint: ecologic study at the county level, not individual-level data
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: epi_02
+  index: 1
+  constraint: vaccine hesitancy must be operationalized from a single pre-existing survey source, not a composite index
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: epi_02
+  index: 2
+  constraint: outcome must be peak weekly case count per 100000 population, not cumulative count
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: epi_02
+  index: 3
+  constraint: must include at least 20 counties with one or more confirmed measles cases
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: counties
+    scope: total
+    limit: 20
+  label_source: classifier
+- brief_id: epi_02
+  index: 4
+  constraint: must control for county population density and median household income
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: epi_02
+  index: 5
+  constraint: no counties with fewer than 10000 residents
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: threshold_restatement
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units:
+      residents|people|population|inhabitants|persons: 1
+    values_only: true
+    exclude_before: per\s*$|/\s*$|per\s+\d[\d,]*\s*$
+    limit: 10000
+    context: exclude|fewer|below|less\s+than|minimum|threshold|at\s+least|under|small
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: finance_01
+  index: 0
+  constraint: must use publicly available stock market and filing data only
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: finance_01
+  index: 1
+  constraint: event study or difference-in-differences design only
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: finance_01
+  index: 2
+  constraint: sample must include at least 200 firms
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: firms|companies|banks|issuers|stocks
+    scope: total
+    limit: 200
+    allow_n: true
+  label_source: classifier
+- brief_id: finance_01
+  index: 3
+  constraint: estimation window must not overlap with the 2008 financial crisis
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: undefined_boundary
+  reason: the forbidden interval (the 2008 crisis) has no fixed boundary in the brief
+  label_source: manual_override
+- brief_id: finance_01
+  index: 4
+  constraint: cost of equity must be estimated using an implied cost of capital model, not CAPM beta
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: manual_override
+- brief_id: finance_01
+  index: 5
+  constraint: analysis period must not exceed 10 years
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: year_range
+    comparator: max
+    limit: 10
+    context: period|window|sample|data|analys|span|cover|from
+  - kind: duration
+    comparator: max
+    unit: years
+    limit: 10
+    context: period|window|sample|span|analysis|panel|cover
+    units:
+    - years
+  label_source: classifier
+- brief_id: finance_02
+  index: 0
+  constraint: must use publicly available TAQ or equivalent exchange-level data
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: finance_02
+  index: 1
+  constraint: sample restricted to mid-cap stocks (market cap between 2 and 10 billion USD)
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units:
+      billion|bn\b|B\b: 1
+      million|mn\b|M\b: 0.001
+    low: 2
+    high: 10
+    context: market\s+cap|mid-?cap|capitali[sz]ation
+    prefix: \$|USD|US\$
+  label_source: classifier
+- brief_id: finance_02
+  index: 2
+  constraint: must measure volatility using realized variance computed from 5-minute log returns, aggregated to a daily measure
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units:
+      -?\s?min(?:ute)?s?\b: 1
+    limit: 5
+    context: returns?|intervals?|sampl|frequency|grid|bars|realized
+  label_source: manual_override
+- brief_id: finance_02
+  index: 3
+  constraint: analysis must cover at least 12 consecutive months
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: months
+    limit: 12
+    context: period|span|window|sample|data|consecutive|cover|months
+    units:
+    - months
+    - years
+  label_source: classifier
+- brief_id: finance_02
+  index: 4
+  constraint: no proprietary order-flow or broker-level data
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: finance_02
+  index: 5
+  constraint: must control for market-wide volatility using a benchmark index
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: genomics_01
+  index: 0
+  constraint: retrospective cohort design using existing biobank samples only, no prospective recruitment
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: genomics_01
+  index: 1
+  constraint: minimum 300 patients with genotype data and documented treatment outcome
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: patients|participants|subjects|cases|individuals
+    scope: total
+    limit: 300
+    allow_n: true
+  label_source: classifier
+- brief_id: genomics_01
+  index: 2
+  constraint: primary outcome is objective tumour response by RECIST 1.1 criteria (responder vs non-responder)
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: genomics_01
+  index: 3
+  constraint: genotyping by a validated assay (TaqMan or equivalent), not imputed
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: genomics_01
+  index: 4
+  constraint: must adjust for age, sex, tumour sidedness, and microsatellite instability status
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: genomics_01
+  index: 5
+  constraint: ancestry restricted to a single continental population to avoid stratification confounding
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: genomics_02
+  index: 0
+  constraint: retrospective analysis of archived FFPE tissue samples with linked clinical follow-up
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: genomics_02
+  index: 1
+  constraint: gene expression measured by NanoString nCounter or RT-qPCR panel, not RNA-seq
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: genomics_02
+  index: 2
+  constraint: minimum 150 patients with at least 3 years of follow-up or documented relapse event
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: follow-up clause not checked
+  clauses:
+  - kind: count
+    comparator: min
+    noun: patients|participants|subjects|cases|individuals
+    scope: total
+    limit: 150
+    allow_n: true
+  label_source: manual_override
+- brief_id: genomics_02
+  index: 3
+  constraint: signature must be locked before validation (no re-training on the validation cohort)
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: manual_override
+- brief_id: genomics_02
+  index: 4
+  constraint: patients limited to surgically resected stage I or II NSCLC only
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: set_membership
+  reason: membership of a named set (states plus DC, stage I or II) needs judgement about how the sample is described
+  label_source: classifier
+- brief_id: genomics_02
+  index: 5
+  constraint: must exclude patients who received neoadjuvant therapy
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: hci_01
+  index: 0
+  constraint: human participants only
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: hci_01
+  index: 1
+  constraint: budget under 25000 GBP
+  classifier_type: numeric_cap_budget
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_budget
+  partial: false
+  note: null
+  clauses:
+  - kind: budget
+    comparator: max
+    limit: 25000
+    currency: GBP
+    strict: true
+    exclude_after_values: ^\s*(?:hard\s+)?(?:cap|limit|ceiling|maximum|threshold|constraint|budget\b)
+    exclude_before: (?:exceed(?:s|ing|ed)?|above|over|beyond|breach(?:es|ing)?)\s+(?:the\s+)?$
+  label_source: classifier
+- brief_id: hci_01
+  index: 2
+  constraint: no more than 2 experimental conditions
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: max
+    noun: conditions?|arms?|groups?|cells
+    scope: total
+    limit: 2
+    context: condition|arm|group|design
+  label_source: classifier
+- brief_id: hci_01
+  index: 3
+  constraint: must measure question quality with a predefined rubric
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: hci_01
+  index: 4
+  constraint: no eye tracking or neuroimaging
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: legal_01
+  index: 0
+  constraint: quasi-experimental difference-in-differences design only, no randomization
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: legal_01
+  index: 1
+  constraint: treatment defined as passage of a state or national mandatory environmental disclosure statute, not voluntary
+    reporting frameworks
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: legal_01
+  index: 2
+  constraint: outcome must be measured using official regulatory enforcement records (e.g., EPA ECHO), not self-reported compliance
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: legal_01
+  index: 3
+  constraint: sample must include at least 3 treated jurisdictions and at least 3 control jurisdictions
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: treated and control groups are not separately verified
+  clauses:
+  - kind: count
+    comparator: min
+    noun: jurisdictions|states|countries|treated\s+jurisdictions|control\s+jurisdictions
+    scope: total
+    limit: 3
+  label_source: classifier
+- brief_id: legal_01
+  index: 4
+  constraint: analysis window must span exactly 5 years pre-enactment and 5 years post-enactment
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: years
+    context_after: ^\s*(?:of\s+)?(?:pre|post|before|after|prior|following|either\s+side|on\s+each\s+side|on\s+either|leading|lagging)
+    exclude_before: placebo|fake|pseudo|minus|lead|lag
+    limit: 5
+    context: \bpre\b|\bpost\b|pre-|post-|before|after|prior|following|enact
+    units:
+    - years
+  label_source: classifier
+- brief_id: legal_01
+  index: 5
+  constraint: must include facility-level fixed effects and year fixed effects
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: legal_01
+  index: 6
+  constraint: no lobbying expenditure data or political variables as controls
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: legal_02
+  index: 0
+  constraint: quasi-experimental design using staggered policy adoption across jurisdictions, no randomization
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: legal_02
+  index: 1
+  constraint: treatment defined as statutory or administrative elimination of cash bail for all misdemeanor charges, not partial
+    reforms or judicial discretion changes
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: legal_02
+  index: 2
+  constraint: pretrial detention measured from official jail booking records, not survey data
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: legal_02
+  index: 3
+  constraint: racial disparity must be operationalized as the Black-white ratio of pretrial detention rates, not raw counts
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: legal_02
+  index: 4
+  constraint: must include at least 4 reform-adopting jurisdictions and at least 4 comparison jurisdictions
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: reform and comparison groups are not separately verified
+  clauses:
+  - kind: count
+    comparator: min
+    noun: jurisdictions|states|counties|cities
+    scope: total
+    limit: 4
+  label_source: classifier
+- brief_id: legal_02
+  index: 5
+  constraint: analysis must span at least 2 years pre-reform and 2 years post-reform
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: years
+    context_after: ^\s*(?:of\s+)?(?:pre|post|before|after|prior|following|either\s+side|on\s+each\s+side|on\s+either|leading|lagging)
+    exclude_before: placebo|fake|pseudo|minus|lead|lag
+    limit: 2
+    context: \bpre\b|\bpost\b|pre-|post-|before|after|reform|prior|following
+    units:
+    - years
+  label_source: classifier
+- brief_id: legal_02
+  index: 6
+  constraint: failure-to-appear rate must be measured from court administrative records within the same jurisdictions
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: matsci_01
+  index: 0
+  constraint: Use only AA7075-T6 aluminium alloy from a single supplier lot
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: classifier
+- brief_id: matsci_01
+  index: 1
+  constraint: Annealing hold time fixed at 2 hours for every specimen
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: hours
+    context_window: 40
+    limit: 2
+    context: hold|soak|dwell|held
+    units:
+    - hours
+    - minutes
+  label_source: classifier
+- brief_id: matsci_01
+  index: 2
+  constraint: Minimum 5 specimens per temperature condition
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: specimens?|samples?|replicates?|coupons?
+    scope: per_group
+    limit: 5
+    group_noun: temperature|conditions?|groups?|levels?|anneal
+  label_source: classifier
+- brief_id: matsci_01
+  index: 3
+  constraint: Grain boundary toughness measured exclusively by chevron-notch short-bar (ASTM E1304)
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: manual_override
+- brief_id: matsci_01
+  index: 4
+  constraint: All specimens solution-treated at 480 C for 1 hour before annealing
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units: &id002
+      °\s?C\b|℃|deg(?:rees)?\s?C\b|\bC\b: 1
+    context_before: (?:solution(?:-|\s)?treat\w*|solutioni[sz]\w*|\bST\b|solution\s+heat\s+treat\w*|solution\s+anneal\w*)\s*(?:temperature|step|stage)?\s*(?:at|:|of|=|to)?\s*(?:\(|\[)?\s*$
+    limit: 480
+    context: solution|solutioni[sz]|\bST\b
+  - kind: duration
+    comparator: exact
+    unit: hours
+    context_window: 40
+    limit: 1
+    context: solution|480
+    units:
+    - hours
+    - minutes
+  label_source: manual_override
+- brief_id: matsci_01
+  index: 5
+  constraint: Testing performed at 23 +/- 2 C ambient temperature
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units: *id002
+    context_window: 35
+    low: 21
+    high: 25
+    context: ambient|room\s+temperature|test(?:ing)?\s+temperature|lab(?:oratory)?\s+temperature|tested\s+at|testing\s+at|23
+  label_source: classifier
+- brief_id: matsci_02
+  index: 0
+  constraint: PLA and PBAT are the only polymers in the blend; no compatibilizers or fillers
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: matsci_02
+  index: 1
+  constraint: Blend ratios tested must include pure PLA (100/0) and pure PBAT (0/100) as controls
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: matsci_02
+  index: 2
+  constraint: Composting conditions follow ISO 14855-1 (58 +/- 2 C, 50-55% moisture)
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units: *id002
+    low: 56
+    high: 60
+    context: compost|incubat|ISO|temperature|58
+  - kind: quantity
+    comparator: range
+    units: *id001
+    low: 50
+    high: 55
+    context: moisture|humidity|water\s+content
+  label_source: classifier
+- brief_id: matsci_02
+  index: 3
+  constraint: Film thickness held at 50 +/- 5 micrometers for all specimens
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units:
+      µm|μm|um\b|micromet(?:er|re)s?|microns?: 1
+      mm\b|millimet(?:er|re)s?: 1000
+    low: 45
+    high: 55
+    context: thick|film
+  label_source: classifier
+- brief_id: matsci_02
+  index: 4
+  constraint: Minimum 3 replicate vessels per blend ratio
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: replicate\s+vessels|replicates?|vessels?|reactors?|bioreactors?|replicate\s+reactors
+    scope: per_group_loose
+    limit: 3
+    group_noun: blend|ratio|composition|treatment|condition|formulation
+  label_source: classifier
+- brief_id: matsci_02
+  index: 5
+  constraint: CO2 measured at least weekly by titration or NDIR
+  classifier_type: none
+  classifier_checkable: false
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: frequency
+    comparator: max
+    limit: 7
+    unit: days
+    context: CO2|CO₂|carbon\s+dioxide|titrat|NDIR|respir|measur|sampl|monitor
+  label_source: manual_override
+- brief_id: molbio_01
+  index: 0
+  constraint: cell culture only, no animal models
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: molbio_01
+  index: 1
+  constraint: budget under 15000 GBP
+  classifier_type: numeric_cap_budget
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_budget
+  partial: false
+  note: null
+  clauses:
+  - kind: budget
+    comparator: max
+    limit: 15000
+    currency: GBP
+    strict: true
+    exclude_after_values: ^\s*(?:hard\s+)?(?:cap|limit|ceiling|maximum|threshold|constraint|budget\b)
+    exclude_before: (?:exceed(?:s|ing|ed)?|above|over|beyond|breach(?:es|ing)?)\s+(?:the\s+)?$
+  label_source: classifier
+- brief_id: molbio_01
+  index: 2
+  constraint: must use at least one loss-of-function approach
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: molbio_01
+  index: 3
+  constraint: no CRISPR screens, only targeted knockdown or knockout
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: molbio_01
+  index: 4
+  constraint: must include appropriate normalization controls
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: neuro_01
+  index: 0
+  constraint: Participants must be healthy adults aged 18-35 with no diagnosed sleep disorders
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units: *id003
+    low: 18
+    high: 35
+    context: participant|adult|age|inclusion|eligib|recruit
+    prefix: aged?|ages?\s+(?:of|range|between)?|age\s+range
+  label_source: classifier
+- brief_id: neuro_01
+  index: 1
+  constraint: Sleep deprivation condition is exactly 36 hours of continuous wakefulness verified by wrist actigraphy
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: hours
+    context_window: 45
+    limit: 36
+    context: wakeful|awake|deprivation|deprived|sleep\s+loss|TSD
+    units:
+    - hours
+  label_source: classifier
+- brief_id: neuro_01
+  index: 2
+  constraint: Control group sleeps 7-9 hours the night before testing, confirmed by actigraphy
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: range
+    unit: hours
+    context_window: 35
+    exclude_after: ^\s*(?:of\s+)?(?:continuous\s+|total\s+|sustained\s+)?(?:wakeful|awake|sleep\s+depriv|without\s+sleep|TSD|SD\b)
+    exclude_before: (?:deprivation|deprived|awake|wakefulness|SD|TSD)\s*(?:of|for|=|:|\()?\s*$
+    low: 7
+    high: 9
+    context: control|rested|habitual|normal|night|TIB|time\s+in\s+bed|opportunity|sleep
+    units:
+    - hours
+  label_source: classifier
+- brief_id: neuro_01
+  index: 3
+  constraint: Primary outcome is d-prime on 2-back and 3-back conditions; reaction time is secondary only
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: neuro_01
+  index: 4
+  constraint: Minimum 20 participants per group (sleep-deprived vs rested)
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: participants?|subjects?|students?|undergraduates?|people|persons?|individuals?|adults?|volunteers?|users?|respondents?|children|patients?|enrollees
+    scope: per_group
+    limit: 20
+    group_noun: groups?|arms?|conditions?|cells?
+    allow_n: true
+  label_source: classifier
+- brief_id: neuro_01
+  index: 5
+  constraint: No caffeine, alcohol, or stimulant use permitted in the 24 hours before testing
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: true
+  checker_type: threshold_restatement
+  partial: true
+  note: only the 24-hour window is checked; the prohibition itself is not
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: hours
+    context_window: 50
+    limit: 24
+    context: caffeine|alcohol|stimulant|abstain|abstinence|substance
+    units:
+    - hours
+    - days
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: neuro_01
+  index: 6
+  constraint: Testing session occurs between 08:00 and 10:00 to control circadian phase
+  classifier_type: none
+  classifier_checkable: false
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: clock_range
+    low: 8
+    high: 10
+    context: test|session|between|morning|circadian|time\s+of\s+day|window|schedul
+  label_source: manual_override
+- brief_id: neuro_02
+  index: 0
+  constraint: Stimulation is anodal tDCS at 2 mA with cathode over right supraorbital area
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units:
+      mA\b: 1
+    limit: 2
+    context: anodal|stimulat|current|tDCS|intensity
+  label_source: classifier
+- brief_id: neuro_02
+  index: 1
+  constraint: Active stimulation duration is exactly 20 minutes; sham ramps down after 30 seconds
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: minutes
+    context_window: 40
+    limit: 20
+    context: stimulat|active|anodal|duration|tDCS
+    units:
+    - minutes
+  - kind: duration
+    comparator: exact
+    unit: seconds
+    context_window: 40
+    limit: 30
+    context: sham|ramp
+    units:
+    - seconds
+  label_source: classifier
+- brief_id: neuro_02
+  index: 2
+  constraint: Electrode size is 5 x 7 cm saline-soaked sponge
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: dims
+    dims:
+    - 5
+    - 7
+    unit: cm
+    context: electrode|sponge|pad|cm
+  label_source: classifier
+- brief_id: neuro_02
+  index: 3
+  constraint: Primary outcome is switch cost (switch trial RT minus repeat trial RT) on a cued task-switching paradigm
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: neuro_02
+  index: 4
+  constraint: Participants are healthy right-handed adults aged 18-40 with no neurological or psychiatric history
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: true
+  note: age range only; handedness and history clauses are not checked
+  clauses:
+  - kind: quantity
+    comparator: range
+    units: *id003
+    low: 18
+    high: 40
+    context: participant|adult|age|inclusion|eligib|recruit
+    prefix: aged?|ages?\s+(?:of|range|between)?|age\s+range
+  label_source: classifier
+- brief_id: neuro_02
+  index: 5
+  constraint: Minimum 20 participants per condition
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: participants?|subjects?|students?|undergraduates?|people|persons?|individuals?|adults?|volunteers?|users?|respondents?|children|patients?|enrollees
+    scope: per_group
+    limit: 20
+    group_noun: conditions?|groups?|arms?|cells?
+    allow_n: true
+  label_source: classifier
+- brief_id: neuro_02
+  index: 6
+  constraint: Blinding verified by post-session questionnaire asking participants to guess active vs sham
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: classifier
+- brief_id: nlp_01
+  index: 0
+  constraint: Few-shot model must be a single 7B-parameter decoder-only LLM with no gradient updates
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: true
+  checker_type: numeric_range
+  partial: true
+  note: only the 7B size (6.5 to 7.5 B) is checked; single-model and no-gradient clauses are not
+  clauses:
+  - kind: quantity
+    comparator: range
+    units:
+      B\b|bn\b|billion: 1
+    context_window: 50
+    low: 6.5
+    high: 7.5
+    context: decoder|LLM|few-shot|llama|mistral|qwen|gemma|in-context|frozen
+  label_source: manual_override
+- brief_id: nlp_01
+  index: 1
+  constraint: Fine-tuned model must be a pre-trained multilingual encoder (e.g., XLM-R base, 270-300M parameters)
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units:
+      M\b|million: 1
+    context_window: 50
+    low: 270
+    high: 300
+    context: encoder|XLM|mBERT|fine-?tuned|multilingual|base
+  label_source: classifier
+- brief_id: nlp_01
+  index: 2
+  constraint: Evaluation languages must have fewer than 10,000 labeled training examples in the chosen dataset
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: max
+    noun: labell?ed\s+(?:training\s+)?examples|training\s+examples|examples|annotated\s+examples|sentences|instances|samples
+    scope: total
+    strict: true
+    limit: 10000
+    context: language|low-resource|train
+  label_source: classifier
+- brief_id: nlp_01
+  index: 3
+  constraint: Minimum 3 low-resource languages evaluated, each from a different language family
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: languages|low-resource\s+languages
+    scope: total
+    limit: 3
+  label_source: classifier
+- brief_id: nlp_01
+  index: 4
+  constraint: Primary metric is macro-F1 on a held-out test set of at least 500 examples per language
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: examples|test\s+examples|instances|sentences|samples|items
+    scope: per_group
+    subset_words: training|train|validation|calibration|discovery|replication|tuning|development|dev
+    limit: 500
+    group_noun: language
+    context: test|held-out|evaluation
+  label_source: classifier
+- brief_id: nlp_01
+  index: 5
+  constraint: Few-shot examples selected randomly with a fixed seed; no manual curation or chain-of-thought
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: manual_override
+- brief_id: nlp_02
+  index: 0
+  constraint: Back-translation uses a single pivot language; no multi-pivot or paraphrase models
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: nlp_02
+  index: 1
+  constraint: Source training domain and target test domain must be explicitly different (e.g., electronics reviews vs restaurant
+    reviews)
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override
+- brief_id: nlp_02
+  index: 2
+  constraint: Baseline model is a fine-tuned encoder of 110-130M parameters (e.g., BERT-base or equivalent)
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units:
+      M\b|million: 1
+    context_window: 50
+    low: 110
+    high: 130
+    context: encoder|BERT|baseline|RoBERTa|DistilBERT|ELECTRA
+  label_source: classifier
+- brief_id: nlp_02
+  index: 3
+  constraint: Augmented data must not exceed 2x the original training set size
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: max
+    units:
+      x\b|-fold|times\s+(?:the\s+)?(?:original|size|training|baseline|larger|as): 1
+    limit: 2
+    context: augment|back-?translat|training\s+set|original|size
+  label_source: classifier
+- brief_id: nlp_02
+  index: 4
+  constraint: Domain shift confirmed by at least a 5-point macro-F1 drop when the baseline trained on source is evaluated
+    on target
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: min
+    units:
+      -?\s?points?\b|pp\b|percentage\s+points|F1\s+points|macro-F1\s+points: 1
+    limit: 5
+    context: drop|gap|decrease|shift|degradation|lower|fall
+  label_source: classifier
+- brief_id: nlp_02
+  index: 5
+  constraint: Minimum 3 domain-shift pairs evaluated
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: domain[- ]shift\s+pairs|domain\s+pairs|pairs|source-target\s+pairs|transfer\s+pairs|domain\s+combinations
+    scope: total
+    limit: 3
+  label_source: classifier
+- brief_id: psych_01
+  index: 0
+  constraint: randomized controlled trial with at least 2 arms
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: arms?|conditions?|groups?
+    scope: total
+    limit: 2
+    context: arm|condition|group|design|trial
+  label_source: classifier
+- brief_id: psych_01
+  index: 1
+  constraint: sample size of at least 200 participants per arm
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: participants?|subjects?|students?|undergraduates?|people|persons?|individuals?|adults?|volunteers?|users?|respondents?|children|patients?|enrollees
+    scope: per_group
+    limit: 200
+    group_noun: arms?|conditions?|groups?|cells?
+    allow_n: true
+  label_source: classifier
+- brief_id: psych_01
+  index: 2
+  constraint: must use the standard race IAT hosted on Project Implicit infrastructure
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: psych_01
+  index: 3
+  constraint: intervention must be a single session lasting no more than 90 minutes
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: max
+    unit: minutes
+    limit: 90
+    context: session|intervention|duration|last|minutes|complet
+    units:
+    - minutes
+    - hours
+  label_source: classifier
+- brief_id: psych_01
+  index: 4
+  constraint: no deception beyond standard IAT instructions
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: psych_01
+  index: 5
+  constraint: follow-up measurement at exactly 2 weeks post-intervention
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: weeks
+    context_window: 40
+    limit: 2
+    context: follow-?up|post-intervention|after|retest|re-?administ|T2|delay|later
+    units:
+    - weeks
+    - days
+  label_source: classifier
+- brief_id: pubhealth_01
+  index: 0
+  constraint: cluster-randomised design at the school level with at least 8 schools per arm
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: schools
+    scope: per_group
+    limit: 8
+    group_noun: arms?|conditions?|groups?
+  label_source: classifier
+- brief_id: pubhealth_01
+  index: 1
+  constraint: participants aged 8 to 12 years at enrolment
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: range
+    units: *id003
+    low: 8
+    high: 12
+    context: age|children|pupils|enrol|eligib|particip
+    prefix: aged?|ages?\s+(?:of|range|between)?|age\s+range
+  label_source: manual_override
+- brief_id: pubhealth_01
+  index: 2
+  constraint: primary outcome is change in proportion of children with BMI-for-age z-score above +2 SD (WHO definition)
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: pubhealth_01
+  index: 3
+  constraint: intervention duration exactly one academic year (9 to 10 months)
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: range
+    unit: months
+    context_window: 45
+    low: 9
+    high: 10
+    context: intervention|duration|academic\s+year|school\s+year|programme|program
+    units:
+    - months
+  label_source: classifier
+- brief_id: pubhealth_01
+  index: 4
+  constraint: no provision of meals, supplements, or physical activity components beyond existing school PE
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: pubhealth_01
+  index: 5
+  constraint: budget under 200000 USD
+  classifier_type: numeric_cap_budget
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_budget
+  partial: false
+  note: null
+  clauses:
+  - kind: budget
+    comparator: max
+    limit: 200000
+    currency: USD
+    strict: true
+    exclude_after_values: ^\s*(?:hard\s+)?(?:cap|limit|ceiling|maximum|threshold|constraint|budget\b)
+    exclude_before: (?:exceed(?:s|ing|ed)?|above|over|beyond|breach(?:es|ing)?)\s+(?:the\s+)?$
+  label_source: classifier
+- brief_id: pubhealth_01
+  index: 6
+  constraint: must obtain parental or guardian consent for all participants
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: manual_override
+- brief_id: pubhealth_02
+  index: 0
+  constraint: individually randomised two-arm trial (text reminders vs standard care)
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: pubhealth_02
+  index: 1
+  constraint: participants must have documented systolic blood pressure above 140 mmHg at screening
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: threshold_restatement
+  partial: false
+  note: null
+  clauses:
+  - kind: quantity
+    comparator: exact
+    units:
+      mm\s?Hg: 1
+    values_only: true
+    context_window: 45
+    limit: 140
+    context: systolic|SBP|screening
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: pubhealth_02
+  index: 2
+  constraint: primary outcome is proportion of days covered by antihypertensive prescription refills over 6 months
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: threshold_restatement
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: months
+    context_window: 45
+    limit: 6
+    context: PDC|proportion\s+of\s+days\s+covered|refill|adherence|primary\s+outcome
+    units:
+    - months
+    - weeks
+    - days
+    ignore_cmp: true
+  label_source: manual_override
+- brief_id: pubhealth_02
+  index: 3
+  constraint: text messages limited to reminder content only, no educational or motivational messaging
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: pubhealth_02
+  index: 4
+  constraint: must exclude patients who do not own a personal mobile phone
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: pubhealth_02
+  index: 5
+  constraint: minimum sample size of 200 participants per arm
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: participants?|subjects?|students?|undergraduates?|people|persons?|individuals?|adults?|volunteers?|users?|respondents?|children|patients?|enrollees
+    scope: per_group
+    limit: 200
+    group_noun: arms?|conditions?|groups?
+    allow_n: true
+  label_source: classifier
+- brief_id: robot_01
+  index: 0
+  constraint: evaluation on exactly 30 previously unseen household objects not present in any training or randomization set
+  classifier_type: exact_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: exact_count
+  partial: true
+  note: count only; the unseen clause is not checked
+  clauses:
+  - kind: count
+    comparator: exact
+    noun: objects|household\s+objects|test\s+objects|items
+    scope: total
+    limit: 30
+    context: unseen|test|evaluat|held-out|novel
+  label_source: classifier
+- brief_id: robot_01
+  index: 1
+  constraint: both methods must start from the same base policy architecture and simulation-pretrained weights
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: robot_01
+  index: 2
+  constraint: real-world fine-tuning budget capped at 500 grasp attempts total
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: max
+    noun: grasp\s+attempts|grasps|attempts|real-world\s+grasps|trials|episodes
+    scope: total
+    limit: 500
+    context: fine-?tun|real-world|budget|real\s+robot|physical
+  label_source: classifier
+- brief_id: robot_01
+  index: 3
+  constraint: domain randomization must vary at least texture, lighting, object mass, and friction parameters
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: robot_01
+  index: 4
+  constraint: robot hardware must be a single 6-DOF or 7-DOF arm with a parallel-jaw gripper, no suction or dexterous hands
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: classifier
+- brief_id: robot_01
+  index: 5
+  constraint: grasp success defined as lifting the object at least 10 cm above the table and holding for 3 seconds
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_quantity
+  partial: false
+  note: the brief's definition is 'at least 10 cm' and 'for 3 seconds'; a stricter stated threshold passes
+  clauses:
+  - kind: quantity
+    comparator: min
+    units:
+      cm\b|centimet(?:er|re)s?: 1
+      mm\b: 0.1
+    context_window: 40
+    limit: 10
+    context: lift|above\s+the\s+table|height|raise
+  - kind: duration
+    comparator: min
+    unit: seconds
+    context_window: 40
+    limit: 3
+    context: hold|holding|stable|lift
+    units:
+    - seconds
+  label_source: manual_override
+- brief_id: robot_01
+  index: 6
+  constraint: each test object must be evaluated with at least 10 grasp attempts per method
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: grasp\s+attempts|attempts|grasps|trials
+    scope: per_group
+    limit: 10
+    group_noun: object|method|item
+  label_source: classifier
+- brief_id: robot_02
+  index: 0
+  constraint: evaluation environment must contain at least 15 movable obstacles per 25 square meters of floor space
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: movable\s+obstacles|obstacles|objects
+    scope: total
+    limit: 15
+    context: 25|m²|m2|m\^2|square\s+met|density|floor
+  label_source: classifier
+- brief_id: robot_02
+  index: 1
+  constraint: exactly 50 human teleoperation demonstrations provided to the demonstration-augmented condition
+  classifier_type: exact_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: exact_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: exact
+    noun: demonstrations?|demos?|teleoperation\s+demonstrations|trajectories|episodes
+    scope: total
+    limit: 50
+    context: demonstrat|teleop|human|\bBC\b|behaviou?ral\s+cloning
+  label_source: classifier
+- brief_id: robot_02
+  index: 2
+  constraint: both conditions must use the same RL algorithm and reward function
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: robot_02
+  index: 3
+  constraint: robot platform must be a differential-drive mobile base with a 2D lidar and RGB-D camera, no additional sensors
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: manual_override
+- brief_id: robot_02
+  index: 4
+  constraint: evaluation consists of at least 100 point-to-point navigation trials across at least 5 distinct room layouts
+  classifier_type: numeric_cap_quantity
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: trials|episodes|navigation\s+trials|runs|point-to-point\s+trials
+    scope: total
+    limit: 100
+    context: evaluat|test|trial
+  - kind: count
+    comparator: min
+    noun: layouts|rooms|room\s+layouts|environments|maps|scenes
+    scope: total
+    limit: 5
+    context: layout|room|distinct|unseen|test
+  label_source: manual_override
+- brief_id: robot_02
+  index: 5
+  constraint: maximum episode length of 120 seconds per trial, timeout counts as failure
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: max
+    unit: seconds
+    context_window: 45
+    limit: 120
+    context: episode|timeout|time\s+limit|time-?out|per\s+trial|max
+    units:
+    - seconds
+    - minutes
+  label_source: classifier
+- brief_id: robot_02
+  index: 6
+  constraint: no map or prior occupancy grid provided to the robot at test time
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: robot_02
+  index: 7
+  constraint: agent must not build or use an occupancy map during evaluation episodes
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: soccomp_01
+  index: 0
+  constraint: randomized controlled experiment with exactly 2 conditions (homogeneous feed vs diverse feed)
+  classifier_type: exact_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: exact_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: exact
+    noun: conditions?|arms?|groups?|feeds?
+    scope: total
+    limit: 2
+    context: condition|arm|group|design|feed
+  label_source: classifier
+- brief_id: soccomp_01
+  index: 1
+  constraint: sample size between 800 and 2000 adult U.S. social media users recruited via a platform partnership or browser
+    extension
+  classifier_type: numeric_range
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_range
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: range
+    noun: users|participants|adults|social\s+media\s+users|respondents|people
+    scope: total
+    low: 800
+    high: 2000
+    allow_n: true
+  label_source: classifier
+- brief_id: soccomp_01
+  index: 2
+  constraint: affective polarization measured using the feeling thermometer difference score (in-party minus out-party warmth)
+    administered pre and post
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: classifier
+- brief_id: soccomp_01
+  index: 3
+  constraint: intervention period must last exactly 6 weeks with compliance verified by feed exposure logs
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: exact
+    unit: weeks
+    context_window: 45
+    limit: 6
+    context: intervention|exposure|treatment|period|duration|feed|study\s+period|weeks
+    units:
+    - weeks
+    - days
+    - months
+  label_source: classifier
+- brief_id: soccomp_01
+  index: 4
+  constraint: participants must not be informed of which condition they are assigned to during the study
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: manual_override
+- brief_id: soccomp_01
+  index: 5
+  constraint: single platform only, no cross-platform analysis
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: manual_override
+- brief_id: soccomp_01
+  index: 6
+  constraint: no deception beyond standard randomized assignment; study must receive IRB approval before data collection
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: procedural
+  reason: a temporal or procedural requirement (before/after, consent, blinding) needs judgement about the plan
+  label_source: manual_override
+- brief_id: soccomp_02
+  index: 0
+  constraint: observational study only, no platform-side A/B test access
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: soccomp_02
+  index: 1
+  constraint: must use publicly available or researcher-accessible API data
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: soccomp_02
+  index: 2
+  constraint: sample must include at least 5000 unique user accounts
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: false
+  note: null
+  clauses:
+  - kind: count
+    comparator: min
+    noun: accounts|users|user\s+accounts|unique\s+users|unique\s+accounts|profiles
+    scope: total
+    limit: 5000
+    allow_n: true
+  label_source: classifier
+- brief_id: soccomp_02
+  index: 3
+  constraint: analysis window must not exceed 6 months
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: max
+    unit: months
+    limit: 6
+    context: window|period|span|analysis|data|cover|collection
+    units:
+    - months
+    - years
+    - weeks
+  label_source: classifier
+- brief_id: soccomp_02
+  index: 4
+  constraint: must operationalize source diversity using Shannon entropy or equivalent information-theoretic metric
+  classifier_type: enumerated_choice
+  classifier_checkable: false
+  checkable: false
+  checker_type: enumerated_choice
+  reason_code: enumerated_choice
+  reason: deciding which option the design uses, or whether both are combined, needs reading of the design, and the alternatives
+    are discussed by name
+  label_source: classifier
+- brief_id: soccomp_02
+  index: 5
+  constraint: no survey or self-report data
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: urban_01
+  index: 0
+  constraint: observational design using census or travel survey microdata
+  classifier_type: none
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: design_type
+  reason: the study design type is a property of the whole design, not of a number or a term
+  label_source: classifier
+- brief_id: urban_01
+  index: 1
+  constraint: must include at least 4 metropolitan areas in the same country
+  classifier_type: numeric_cap_count
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_count
+  partial: true
+  note: count only; the same-country clause is not checked
+  clauses:
+  - kind: count
+    comparator: min
+    noun: metropolitan\s+areas|metro\s+areas|metros|cities|MSAs|urban\s+areas|regions|CBSAs
+    scope: total
+    limit: 4
+  label_source: classifier
+- brief_id: urban_01
+  index: 2
+  constraint: TOD sites must have had rail service operational for at least 5 years before data collection
+  classifier_type: numeric_cap_duration
+  classifier_checkable: true
+  checkable: true
+  checker_type: numeric_cap_duration
+  partial: false
+  note: null
+  clauses:
+  - kind: duration
+    comparator: min
+    unit: years
+    context_window: 50
+    limit: 5
+    context: rail|operational|service|station|opened|TOD|in\s+operation|before
+    units:
+    - years
+  label_source: classifier
+- brief_id: urban_01
+  index: 3
+  constraint: must control for household income, car ownership, and employment density
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: required_term
+  reason_code: required_term
+  reason: the required element's words also appear as a restatement in the proposal's checklist; presence of the words does
+    not show the design uses it
+  label_source: classifier
+- brief_id: urban_01
+  index: 4
+  constraint: no primary data collection such as intercept surveys or travel diaries
+  classifier_type: forbidden_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: forbidden_term
+  reason_code: forbidden_term
+  reason: 'a banned term also appears in the proposal''s own constraint checklist and under negation (''no X: met''); term
+    presence cannot separate use, negation and restatement without judgement'
+  label_source: classifier
+- brief_id: urban_01
+  index: 5
+  constraint: car commuting mode share must be the single dependent variable
+  classifier_type: required_term
+  classifier_checkable: false
+  checkable: false
+  checker_type: none
+  reason_code: definition
+  reason: semantic equivalence of a definition or operationalisation cannot be decided by a regex
+  label_source: manual_override

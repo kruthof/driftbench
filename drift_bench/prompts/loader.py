@@ -3,37 +3,88 @@
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, StrictUndefined
 
 PROMPTS_DIR = Path(__file__).parent
 
-# Module-level singleton to avoid re-creating on every render
-_env: Environment | None = None
+# Process-wide default prompts directory. ``None`` means PROMPTS_DIR.
+# ``set_default_prompts_dir`` changes it (pipeline ``--prompts-dir``).
+_default_prompts_dir: Path | None = None
+
+# One Jinja2 environment per resolved prompts directory.
+_envs: dict[Path, Environment] = {}
 
 
-def get_env() -> Environment:
-    """Get or create Jinja2 environment (singleton)."""
-    global _env
-    if _env is None:
-        _env = Environment(
-            loader=FileSystemLoader(str(PROMPTS_DIR)),
+def set_default_prompts_dir(prompts_dir: Path | str | None) -> None:
+    """Set the prompts directory used when a caller passes none.
+
+    ``None`` restores the built-in ``drift_bench/prompts`` directory.
+    Callers that cannot pass ``prompts_dir`` explicitly (the condition
+    runners) pick this up through ``get_turn_prompts`` and friends.
+    """
+    global _default_prompts_dir
+    _default_prompts_dir = None if prompts_dir is None else Path(prompts_dir)
+
+
+def get_default_prompts_dir() -> Path:
+    """Return the prompts directory used when a caller passes none."""
+    return _default_prompts_dir if _default_prompts_dir is not None else PROMPTS_DIR
+
+
+def resolve_prompts_dir(prompts_dir: Path | str | None = None) -> Path:
+    """Resolve an optional prompts directory to an absolute path."""
+    base = Path(prompts_dir) if prompts_dir is not None else get_default_prompts_dir()
+    return base.resolve()
+
+
+def get_env(prompts_dir: Path | str | None = None) -> Environment:
+    """Get or create the Jinja2 environment for a prompts directory.
+
+    A custom directory falls back to the built-in ``drift_bench/prompts``
+    for any template it does not contain. So a pilot directory only needs
+    the templates it overrides.
+    """
+    resolved = resolve_prompts_dir(prompts_dir)
+    env = _envs.get(resolved)
+    if env is None:
+        if resolved == PROMPTS_DIR.resolve():
+            loader = FileSystemLoader(str(resolved))
+        else:
+            if not resolved.is_dir():
+                raise FileNotFoundError(f"Prompts directory not found: {resolved}")
+            loader = ChoiceLoader([
+                FileSystemLoader(str(resolved)),
+                FileSystemLoader(str(PROMPTS_DIR)),
+            ])
+        env = Environment(
+            loader=loader,
             undefined=StrictUndefined,
             trim_blocks=True,
             lstrip_blocks=True,
         )
-    return _env
+        _envs[resolved] = env
+    return env
 
 
-def render_template(template_name: str, **kwargs: Any) -> str:
-    """Render a named template with given variables."""
-    env = get_env()
+def render_template(
+    template_name: str,
+    prompts_dir: Path | str | None = None,
+    **kwargs: Any,
+) -> str:
+    """Render a named template with given variables.
+
+    ``prompts_dir`` selects the template directory. No template uses a
+    variable of that name, so the keyword cannot clash with template
+    variables.
+    """
+    env = get_env(prompts_dir)
     template = env.get_template(template_name)
     return template.render(**kwargs)
 
 
-def render_system_prompt() -> str:
+def render_system_prompt(prompts_dir: Path | str | None = None) -> str:
     """Render the system prompt (no variables needed)."""
-    return render_template("system.j2")
+    return render_template("system.j2", prompts_dir=prompts_dir)
 
 
 def render_brief_for_prompt(brief: dict[str, Any]) -> str:
@@ -61,7 +112,11 @@ def render_brief_for_prompt(brief: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def get_turn_prompts(condition: str, brief: dict[str, Any]) -> list[str]:
+def get_turn_prompts(
+    condition: str,
+    brief: dict[str, Any],
+    prompts_dir: Path | str | None = None,
+) -> list[str]:
     """Return the ordered list of user prompts for a given condition.
 
     For single_shot: returns a 1-element list.
@@ -72,23 +127,23 @@ def get_turn_prompts(condition: str, brief: dict[str, Any]) -> list[str]:
     brief_text = render_brief_for_prompt(brief)
 
     if condition == "single_shot":
-        return [render_template("single_shot.j2", brief=brief_text)]
+        return [render_template("single_shot.j2", prompts_dir=prompts_dir, brief=brief_text)]
 
     elif condition == "multi_turn_neutral":
-        full = render_template("multi_turn_neutral.j2", brief=brief_text)
+        full = render_template("multi_turn_neutral.j2", prompts_dir=prompts_dir, brief=brief_text)
         return _split_turns(full)
 
     elif condition == "multi_turn_pressure":
-        full = render_template("multi_turn_pressure.j2", brief=brief_text)
+        full = render_template("multi_turn_pressure.j2", prompts_dir=prompts_dir, brief=brief_text)
         return _split_turns(full)
 
     elif condition == "multi_turn_pressure_rigor":
-        full = render_template("multi_turn_pressure_rigor.j2", brief=brief_text)
+        full = render_template("multi_turn_pressure_rigor.j2", prompts_dir=prompts_dir, brief=brief_text)
         return _split_turns(full)
 
     elif condition == "checkpointed_pressure":
-        pressure_turns = get_turn_prompts("multi_turn_pressure", brief)
-        checkpoint_text = render_template("checkpoint.j2")
+        pressure_turns = get_turn_prompts("multi_turn_pressure", brief, prompts_dir=prompts_dir)
+        checkpoint_text = render_template("checkpoint.j2", prompts_dir=prompts_dir)
         result = []
         for i, turn in enumerate(pressure_turns):
             result.append(turn)
@@ -114,9 +169,9 @@ def get_checkpoint_indices(condition: str) -> set[int]:
     return set()
 
 
-def get_restatement_probe() -> str:
+def get_restatement_probe(prompts_dir: Path | str | None = None) -> str:
     """Return the restatement probe prompt text."""
-    return render_template("restatement_probe.j2")
+    return render_template("restatement_probe.j2", prompts_dir=prompts_dir)
 
 
 def _split_turns(text: str) -> list[str]:

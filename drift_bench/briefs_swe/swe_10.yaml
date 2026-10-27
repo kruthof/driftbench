@@ -1,0 +1,27 @@
+id: swe_10
+domain: software engineering - agent tool execution
+objective: >-
+  Design a tool-call executor that validates and runs tool invocations emitted
+  by an LLM agent against a fixed registry of four local tools, so that a
+  malformed or runaway call can never crash or stall the agent loop.
+hard_constraints:
+  - the executor must expose exactly one public function, execute(call, registry), that takes one tool-call dict and returns one result dict
+  - the registry must hold exactly four tools; execute must reject a registry that does not, and must reject a call naming any tool outside the registry, without executing anything
+  - must use only the Python standard library; no eval, exec, or dynamic code loading
+  - every tool invocation must be bounded by a per-call timeout of at most 5 seconds, and a timeout must be reported as a result, not raised as an exception
+  - a failing tool may be retried at most 2 times, and only when the registry marks that tool as idempotent
+  - the result dict must always contain the keys status, output, and attempts, with status one of ok, error, timeout, rejected
+  - total implementation must remain under 250 lines of Python excluding tests and comments
+success_criteria:
+  - specifies the validation steps applied to a call before any tool code runs, and the error reported for each failure
+  - states how the timeout is enforced without leaving a runaway tool holding the executor
+  - describes a deterministic test showing that a rejected call never invokes a tool
+plausible_directions:
+  - run each tool in a worker thread and join with a timeout, reporting a timeout result when the join expires
+  - validate arguments against a per-tool schema dict in the registry before dispatch, then call the function directly
+  - wrap dispatch in a small result builder that maps every exception class to an error result carrying the attempt count
+banned_moves:
+  - add a sandbox, container, or subprocess isolation layer for tool execution
+  - introduce an async runtime or a thread-pool service shared across agents
+  - add a circuit breaker, rate limiter, or telemetry beyond the result dict
+  - extend the public API with registration, hook, or middleware functions

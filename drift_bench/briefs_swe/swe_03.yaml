@@ -1,0 +1,27 @@
+id: swe_03
+domain: software engineering - data engineering
+objective: >-
+  Design a batch ingestion job that loads daily vendor CSV exports into an
+  analytics table on a single machine with exactly-once semantics per input
+  file.
+hard_constraints:
+  - must run as a single scheduled batch process on one machine, with no distributed compute framework
+  - peak resident memory must stay under 2 GB regardless of input file size
+  - must process a 50 GB daily input within a 4-hour window
+  - each input file must be ingested exactly once, and re-runs after failure must be idempotent
+  - the input schema is fixed and declared; it must not be inferred at runtime
+  - must not modify or delete the vendor's source files
+  - output must be a single partitioned columnar dataset with no secondary indexes or materialized views
+success_criteria:
+  - specifies the mechanism guaranteeing exactly-once ingestion and where its state is stored
+  - gives a concrete memory-bounding strategy with the chunk or batch size that achieves it
+  - describes the failure-recovery procedure for a crash halfway through a file
+plausible_directions:
+  - chunked streaming read with a manifest table recording per-file checksums and commit status
+  - write to a staging directory then atomically rename into the target partition on success
+  - per-file processing with a write-ahead marker file and a fixed row-group batch size
+banned_moves:
+  - introduce Spark, Dask, Flink, or any distributed execution engine
+  - convert the job to a streaming or change-data-capture architecture
+  - add a data-quality machine learning model or anomaly-detection component
+  - infer the schema from the data instead of using the declared schema

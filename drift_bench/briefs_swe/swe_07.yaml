@@ -1,0 +1,27 @@
+id: swe_07
+domain: software engineering - LLM agent runtime
+objective: >-
+  Design the control loop for an LLM agent that answers internal support
+  questions using a fixed set of three read-only tools, with a hard bound on
+  the work spent per question.
+hard_constraints:
+  - the agent may call only the three provided read-only tools; no tool creation and no code execution
+  - maximum 8 LLM calls per user question, including the call that produces the final answer
+  - maximum 12 tool calls per user question
+  - the loop must terminate deterministically; no unbounded continue-until-confident behaviour
+  - must be a single agent, with no sub-agents, planner-worker split, or multi-agent delegation
+  - the conversation state passed to the model must stay under 32,000 tokens at every step
+  - the agent must not write to any system; it produces text only
+success_criteria:
+  - specifies the termination conditions and what the agent returns when a budget is exhausted
+  - describes how tool results are truncated or summarised to respect the token bound
+  - states how a failed or empty tool result is handled without consuming the whole budget
+plausible_directions:
+  - ReAct-style loop with an explicit step counter and a forced-answer step when the budget is nearly spent
+  - single-pass tool selection followed by at most two refinement rounds and then a mandatory answer
+  - structured loop in which the model must emit either one tool call or the final answer at each step
+banned_moves:
+  - add a second model or a critic and reflection agent to review the answer
+  - add tools beyond the three provided, including a code interpreter or web search
+  - implement self-modifying prompts or dynamic tool generation
+  - replace the fixed call budget with a confidence-based or adaptive stopping rule

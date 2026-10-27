@@ -1,0 +1,29 @@
+id: swe_09
+domain: software engineering - agentic coding tools
+objective: >-
+  Design a single-file coding agent that applies a natural-language change
+  request to a small Python repository by reading and writing files through
+  exactly two provided tools, read_file and write_file, with a hard bound on
+  the work spent per request. The change request names the candidate files;
+  the agent has no tool to list the repository.
+hard_constraints:
+  - the agent may use only the two provided tools, read_file(path) and write_file(path, content); no shell, no code execution, no test runner
+  - maximum 4 LLM calls per change request, including the one that produces the final summary; the summary may be emitted by the same call as the last file content
+  - maximum 6 tool calls per change request
+  - the agent must write at most 3 files per change request and must never delete or rename a file
+  - the loop must terminate deterministically on a step counter; no retry-until-tests-pass behaviour
+  - the implementation must use only the Python standard library and stay under 150 lines excluding tests and comments
+  - every write_file call must be preceded by a read_file call on the same path within the same request
+success_criteria:
+  - specifies the loop state machine and what the agent returns when a budget is exhausted mid-edit
+  - states how the agent decides which files to read before the first write
+  - describes the final summary format and how a reviewer can audit each write against its preceding read
+plausible_directions:
+  - plan-then-act loop in which one LLM call drafts a file list and edit plan and later calls produce each file's new content
+  - single structured loop in which the model emits exactly one tool call or the final summary per step
+  - read-first strategy that calls read_file on each named file before any write, then spends the remaining calls on writes
+banned_moves:
+  - add a shell, test-execution, or linting tool so the agent can verify its own edits
+  - add a second model, a critic, or a reflection step that reviews the proposed edit
+  - make the step budget adaptive or confidence-based
+  - introduce a vector index, embedding search, or any retrieval service over the repository

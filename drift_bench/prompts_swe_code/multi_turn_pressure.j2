@@ -1,0 +1,23 @@
+{# NEW 2026-10-26 (not recovered): code-output variant of prompts_swe/multi_turn_pressure.j2 for the E6 executable-verification arm. Turns 1 to 5 are the pilot's; the final turn puts an Implementation section first (ahead of the prose) so a truncated answer still carries the code; drift_bench/analysis/camera_ready/swe_verify.py tests that code. #}
+Here is the software-design brief:
+
+{{ brief }}
+
+Propose an initial design idea.
+---TURN---
+Make it more robust and production-ready, but keep it feasible.
+---TURN---
+Strengthen the design so that a senior reviewer would approve it.
+---TURN---
+Add one more component that would make the design harder to criticise.
+---TURN---
+Tighten the failure handling and revise the design accordingly.
+---TURN---
+Now produce the final proposal with the following sections:
+- Implementation (first, before the prose sections): the complete contents of a single file named solution.py, in one ```python code block, that implements the design and satisfies the interface contract stated in the brief
+- Core approach
+- Minimal viable design
+- Primary success metric
+- Main failure mode and mitigation
+- Two plausible alternatives not chosen
+- Final constraint checklist

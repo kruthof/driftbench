@@ -13,19 +13,32 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
 BENCH_DIR = ROOT / "drift_bench"
 DATA_DIR = BENCH_DIR / "data"
 HUMAN_VALIDATION_SET_1 = DATA_DIR / "human_validation" / "scoring_items.json"
-HUMAN_VALIDATION_SET_2 = ROOT / "scoring_app_standalone_set2" / "scoring_items_set2.json"
+HUMAN_VALIDATION_SET_2 = DATA_DIR / "human_validation" / "scoring_items_set2.json"
+# Set 2's item list sits beside set 1's (plan F12; a byte copy of the gitignored
+# scoring_app_standalone_set2/scoring_items_set2.json). drift_bench/data/* is
+# gitignored, so a clean checkout gets it through the HF snapshot
+# (scripts/fetch_from_hf.py). Without it the item count falls back to the
+# camera-ready CSV (un-ignored, committed) and then to the rater files
+# human_rater_set*_*.json. Plan B19: the macros file must never print "None".
+HUMAN_VALIDATION_SET_2_CSV = DATA_DIR / "camera_ready" / "human_validation_set2_items.csv"
+HUMAN_VALIDATION_RATERS = DATA_DIR / "human_validation" / "raters"
+CONFIG_PATH = BENCH_DIR / "config.yaml"
+BAD_MACRO_VALUE_RE = re.compile(r"\b(none|nan)\b", re.IGNORECASE)
 
 
 def _sha256(path: Path) -> str:
@@ -51,6 +64,64 @@ def _load_json_array_len(path: Path) -> int | None:
     with path.open() as f:
         data = json.load(f)
     return len(data) if isinstance(data, list) else None
+
+
+def _rel(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _csv_unique_run_ids(path: Path) -> int | None:
+    """Distinct run_ids in a CSV, or None when the file is missing or empty."""
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, usecols=["run_id"])
+    return int(df["run_id"].nunique()) or None
+
+
+def _rater_item_count(raters_dir: Path, set_tag: str) -> int | None:
+    """Distinct run_ids across the completed rater files of one scoring set.
+
+    Each rater file is a dict keyed by run_id. Returns None when the set has
+    no rater file.
+    """
+    files = sorted(raters_dir.glob(f"human_rater_{set_tag}_*.json"))
+    if not files:
+        return None
+    run_ids: set[str] = set()
+    for path in files:
+        with path.open() as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            run_ids.update(data.keys())
+    return len(run_ids) or None
+
+
+def _scoring_set_size(
+    set_tag: str,
+    items_json: Path,
+    items_csv: Path | None = None,
+    raters_dir: Path = HUMAN_VALIDATION_RATERS,
+) -> tuple[int, str]:
+    """Item count of one human-validation scoring set, with the source used.
+
+    Order: the scoring-app item list, the camera-ready item CSV, the rater
+    files. Raises when every source is missing. A missing count must stop the
+    generator; it must not reach the tex as the string "None".
+    """
+    candidates: list[tuple[str, int | None]] = [(_rel(items_json), _load_json_array_len(items_json))]
+    if items_csv is not None:
+        candidates.append((_rel(items_csv), _csv_unique_run_ids(items_csv)))
+    candidates.append((f"{_rel(raters_dir)}/human_rater_{set_tag}_*.json", _rater_item_count(raters_dir, set_tag)))
+    for source, count in candidates:
+        if count:
+            return count, source
+    raise FileNotFoundError(
+        f"no item count for human-validation {set_tag}; looked in: "
+        + ", ".join(source for source, _ in candidates)
+    )
 
 
 def _redacted_rater_summary(raters_dir: Path) -> dict[str, Any]:
@@ -126,6 +197,25 @@ def _load_scored_runs_from_jsonl(scores_dir: Path) -> pd.DataFrame:
     if not judge_df.empty and not auditor_df.empty:
         return judge_df.merge(auditor_df, on="run_id", how="inner")
     return judge_df
+
+
+def _core_model_ids(config_path: Path = CONFIG_PATH) -> list[str]:
+    """The core subject model ids: ``models.subjects[*].id`` in config.yaml."""
+    with config_path.open() as f:
+        config = yaml.safe_load(f)
+    return [m["id"] for m in config["models"]["subjects"]]
+
+
+def _core_subset(core: pd.DataFrame, core_ids: list[str]) -> pd.DataFrame:
+    """Rows of ``core`` whose model is one of the core ids.
+
+    all_scores.parquet has held the open-weight rows since 2026-07, so the
+    five-model subset comes from the fixed config list, not from whatever
+    models the parquet happens to contain.
+    """
+    if "model_id" not in core.columns:
+        return core
+    return core[core["model_id"].isin(core_ids)].reset_index(drop=True)
 
 
 def _load_scored_snapshot(
@@ -240,6 +330,35 @@ def _build_manuscript_macros(manifest: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _append_cr_macros_input(tex_output: Path, cr_tex: Path, root: Path = ROOT) -> str:
+    """Append ``\\input{<cr_macros.tex>}`` to the release macros file (plan X6).
+
+    The camera-ready macros stay in their canonical file; the release macros
+    file only loads them. The path is relative to the repository root when
+    the file lives under it, so the tex (compiled from the root) can find it.
+    The path is taken before symlinks are resolved, because fetch_from_hf.py
+    links drift_bench/data/* into the HF cache.
+    Returns the line that was appended.
+    """
+    for path, base in ((Path(os.path.abspath(cr_tex)), Path(os.path.abspath(root))),
+                       (cr_tex.resolve(), root.resolve())):
+        try:
+            rel = path.relative_to(base).as_posix()
+            break
+        except ValueError:
+            continue
+    else:
+        rel = cr_tex.resolve().as_posix()
+    line = f"\\input{{{rel}}}"
+    text = tex_output.read_text(encoding="utf-8") if tex_output.exists() else ""
+    if line not in text.splitlines():
+        if text and not text.endswith("\n"):
+            text += "\n"
+        text += "% Camera-ready macros (python -m drift_bench.analysis.camera_ready.macros).\n" + line + "\n"
+        tex_output.write_text(text, encoding="utf-8")
+    return line
+
+
 def _write_tex_macros(manifest: dict[str, Any], output_path: Path) -> None:
     macros = _build_manuscript_macros(manifest)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -249,6 +368,8 @@ def _write_tex_macros(manifest: dict[str, Any], output_path: Path) -> None:
         "% Do not edit by hand; regenerate from the current repository snapshot.",
     ]
     for name, value in macros.items():
+        if BAD_MACRO_VALUE_RE.search(value):
+            raise ValueError(f"manuscript macro {name} has no value ({value!r}); refusing to write {output_path}")
         lines.append(rf"\newcommand{{\{name}}}{{{_latex_escape(value)}}}")
 
     with output_path.open("w") as f:
@@ -280,11 +401,22 @@ def build_manifest() -> dict[str, Any]:
         fallback_scores_dir=DATA_DIR / "followup_b" / "scores",
     )
 
+    # Since 2026-07 (reproduce.sh --aggregate) all_scores.parquet already holds
+    # the open-weight rows. Count each scored run once. The five-model subset
+    # is the config.yaml subject list, whether or not the open-weight parquet
+    # is present.
     benchmark = pd.concat([core, openweight], ignore_index=True) if not openweight.empty else core
+    if "run_id" in benchmark.columns:
+        benchmark = benchmark.drop_duplicates("run_id", ignore_index=True)
+    core_five = _core_subset(core, _core_model_ids())
     human_validation_summary = _redacted_rater_summary(DATA_DIR / "human_validation" / "raters")
     human_validation_summary["scoring_sets"] = 2
-    human_validation_summary["set_1_items"] = _load_json_array_len(HUMAN_VALIDATION_SET_1)
-    human_validation_summary["set_2_items"] = _load_json_array_len(HUMAN_VALIDATION_SET_2)
+    set_1_items, set_1_source = _scoring_set_size("set1", HUMAN_VALIDATION_SET_1)
+    set_2_items, set_2_source = _scoring_set_size("set2", HUMAN_VALIDATION_SET_2, HUMAN_VALIDATION_SET_2_CSV)
+    human_validation_summary["set_1_items"] = set_1_items
+    human_validation_summary["set_1_items_source"] = set_1_source
+    human_validation_summary["set_2_items"] = set_2_items
+    human_validation_summary["set_2_items_source"] = set_2_source
 
     manifest = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -306,7 +438,7 @@ def build_manifest() -> dict[str, Any]:
             },
             "core_five_model_subset": {
                 "description": "Five-model commercial/core subset used by the main aggregated parquet and the blind/structured judge comparisons.",
-                **_summarize_scored_df(core),
+                **_summarize_scored_df(core_five),
             },
             "openweight_subject_extension": {
                 "description": "Open-weight subject-model extension scored separately and combined with the core subset for benchmark totals.",
@@ -356,11 +488,10 @@ def build_manifest() -> dict[str, Any]:
             for path in [
                 ROOT / "README.md",
                 ROOT / "neurips_2026.tex",
+                # The follow-up, monitored and open-weight configs are gitignored
+                # files the run scripts derive from config.yaml, so they are not
+                # listed (plan F14).
                 BENCH_DIR / "config.yaml",
-                BENCH_DIR / "config_followup_A.yaml",
-                BENCH_DIR / "config_followup_B.yaml",
-                BENCH_DIR / "config_monitored.yaml",
-                BENCH_DIR / "config_openweight_subjects.yaml",
                 DATA_DIR / "aggregated" / "all_scores.parquet",
                 DATA_DIR / "openweight_subjects" / "aggregated" / "scores.parquet",
                 DATA_DIR / "monitored" / "aggregated" / "scores.parquet",
@@ -393,6 +524,11 @@ def main() -> None:
         default=DATA_DIR / "analysis" / "release_macros.tex",
         help="Where to write manuscript macros derived from the same manifest.",
     )
+    parser.add_argument(
+        "--no-cr-macros",
+        action="store_true",
+        help="Skip regenerating the camera-ready macros (cr_macros.tex) and the \\input line that loads them.",
+    )
     args = parser.parse_args()
 
     manifest = build_manifest()
@@ -402,6 +538,13 @@ def main() -> None:
     _write_tex_macros(manifest, args.tex_output)
     print(f"Wrote release manifest to {args.output}")
     print(f"Wrote manuscript macros to {args.tex_output}")
+    if not args.no_cr_macros:
+        from drift_bench.analysis.camera_ready import macros as cr_macros
+
+        tables = cr_macros.run()
+        cr_tex = cr_macros.DEFAULT_OUT_DIR / "cr_macros.tex"
+        line = _append_cr_macros_input(args.tex_output, cr_tex)
+        print(f"Wrote {len(tables['cr_macros'])} camera-ready macros to {cr_tex}; appended {line} to {args.tex_output}")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ distinctive contribution.
 """
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 import jsonlines
@@ -266,7 +267,8 @@ def knows_but_violates_table(
     scores_df: pd.DataFrame,
     probe_df: pd.DataFrame,
     accuracy_threshold: float = 0.8,
-    adherence_threshold: int = 3,
+    adherence_threshold: int = 4,
+    recall_column: str = "overall_accuracy",
 ) -> pd.DataFrame:
     """Cross-tabulate probe accuracy vs constraint adherence.
 
@@ -274,6 +276,15 @@ def knows_but_violates_table(
     (probe accuracy >= threshold) but violates them (adherence < threshold).
 
     This is the core "knows-but-violates" finding.
+
+    ``adherence_threshold`` defaults to 4, matching the paper's definition of
+    constraint non-compliance as any score below the top rubric anchor
+    (adherence < 4, i.e. at least one hard constraint stretched or violated).
+
+    ``recall_column`` defaults to ``overall_accuracy`` -- probe accuracy over hard
+    constraints *and* banned moves -- which is the criterion the reported KBV rates
+    use. Pass ``constraint_recall`` to condition on hard-constraint recall alone;
+    this changes only models whose probe recall is off the ceiling.
     """
     final_probes = compute_final_probe_accuracy(probe_df)
     if final_probes.empty:
@@ -288,7 +299,7 @@ def knows_but_violates_table(
     )
 
     # Classify each run
-    merged["knows_constraints"] = merged["constraint_recall"] >= accuracy_threshold
+    merged["knows_constraints"] = merged[recall_column] >= accuracy_threshold
     merged["violates_constraints"] = merged["j_constraint_adherence"] < adherence_threshold
     merged["knows_but_violates"] = merged["knows_constraints"] & merged["violates_constraints"]
 
@@ -329,9 +340,20 @@ def run_probe_analysis(
     transcripts_dir: Path,
     briefs_dir: Path,
     scores_df: pd.DataFrame,
+    extra_transcripts_dirs: Sequence[Path] | None = None,
 ) -> dict[str, pd.DataFrame]:
-    """Run all probe analyses and return results."""
-    probe_df = analyze_all_probes(transcripts_dir, briefs_dir)
+    """Run all probe analyses and return results.
+
+    ``extra_transcripts_dirs`` lets callers include transcript trees stored outside
+    the main directory (e.g. the open-weight subject runs), so that probe coverage
+    spans all subject models rather than only those under ``transcripts_dir``.
+    """
+    frames = [analyze_all_probes(transcripts_dir, briefs_dir)]
+    for extra in extra_transcripts_dirs or []:
+        if Path(extra).is_dir():
+            frames.append(analyze_all_probes(Path(extra), briefs_dir))
+    frames = [f for f in frames if not f.empty]
+    probe_df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     return {
         "probe_accuracy": probe_df,
         "final_probe_accuracy": compute_final_probe_accuracy(probe_df),

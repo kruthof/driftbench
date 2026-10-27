@@ -1,0 +1,26 @@
+id: swe_08
+domain: software engineering - agent orchestration and concurrency
+objective: >-
+  Design an in-process work queue that lets a pool of agent workers claim and
+  complete long-running tasks without losing or duplicating any task.
+hard_constraints:
+  - the queue must live in a single process and use only the Python standard library
+  - the worker pool must be capped at 16 concurrent workers
+  - a task must never be delivered to two workers at the same time
+  - a task whose worker dies must become claimable again within 60 seconds
+  - the queue must be bounded at 1,000 pending tasks and must reject enqueues beyond that
+  - the public API must expose exactly four operations, enqueue, claim, complete, and fail
+  - queue state must be in-memory only, with no persistence to disk or external storage
+success_criteria:
+  - states the synchronisation primitives used and the invariant that prevents double delivery
+  - describes the lease or heartbeat mechanism that achieves the 60-second recovery bound
+  - specifies the behaviour of claim when the queue is empty and when the worker cap is reached
+plausible_directions:
+  - lease-based claims with an expiry timestamp checked lazily on each claim call
+  - condition-variable-based blocking claim with a monotonic deadline for lease expiry
+  - single mutex protecting a pending deque and a claimed dict keyed by task id
+banned_moves:
+  - introduce Redis, RabbitMQ, Celery, or any external broker
+  - add task prioritisation, fair scheduling, or dependency graphs between tasks
+  - add persistence, a write-ahead log, or crash-durable storage
+  - expand the public API beyond the four specified operations

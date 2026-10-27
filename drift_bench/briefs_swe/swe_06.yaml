@@ -1,0 +1,27 @@
+id: swe_06
+domain: software engineering - developer tooling
+objective: >-
+  Design a command-line tool that summarises error rates from plain-text
+  application logs on an engineer's laptop without shipping any log data
+  elsewhere.
+hard_constraints:
+  - must be a single-file Python script using only the standard library
+  - must read from stdin or a file path and write its summary to stdout, with no other I/O
+  - must process a 10 GB log file in under 2 minutes on a laptop with 8 GB of RAM
+  - peak memory must stay under 500 MB
+  - the log format is fixed and given; the tool must not attempt format auto-detection
+  - output must support exactly two formats, a human-readable table and newline-delimited JSON
+  - must not make any network calls
+success_criteria:
+  - gives the streaming algorithm and states why memory usage is independent of file size
+  - specifies the parsing approach and its throughput in MB/s together with the assumption behind the estimate
+  - describes the behaviour on malformed lines, including whether they are counted or skipped
+plausible_directions:
+  - line-oriented streaming scan with a precompiled regex and fixed-size counters per error class
+  - split-on-delimiter fast path with a regex fallback only for lines that fail the fast path
+  - chunked binary reads with manual line splitting to avoid per-line decoding overhead
+banned_moves:
+  - add a TUI, web dashboard, or any interactive interface
+  - add log shipping, uploading, or integration with a hosted observability service
+  - introduce pandas, polars, or any third-party parsing dependency
+  - add anomaly detection, clustering, or machine-learning log classification

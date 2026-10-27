@@ -19,6 +19,7 @@ import jsonlines
 from drift_bench.runners.base import Transcript, RunMetadata, Message
 from drift_bench.judges.judge import JudgePipeline
 from drift_bench.judges.auditor import AuditorPipeline
+from drift_bench.prompts.loader import set_default_prompts_dir
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,6 +49,9 @@ async def run_experiment(
     concurrency: int = 5,
     skip_scoring: bool = False,
     max_budget: float | None = None,
+    prompts_dir: Path | None = None,
+    rubrics_path: Path | None = None,
+    calibration_path: Path | None = None,
 ) -> dict[str, Any]:
     """Run the full experimental pipeline.
 
@@ -62,10 +66,59 @@ async def run_experiment(
         brief_reinjection_ids: List of brief IDs for brief-reinjection condition
         concurrency: Max concurrent API calls
         skip_scoring: If True, only run subjects (no judge/auditor)
+        prompts_dir: Directory of Jinja2 templates. Templates missing there
+            fall back to drift_bench/prompts. Default: drift_bench/prompts.
+        rubrics_path: Rubric YAML for the judge and auditor.
+            Default: drift_bench/judges/rubrics.yaml.
+        calibration_path: Calibration YAML for the judge and auditor.
+            Default: drift_bench/judges/calibration.yaml.
 
     Returns:
         Summary dict with counts and timing
     """
+    # The condition runners read turn prompts through the loader's default
+    # directory. Set it for this run only and reset it afterwards.
+    if prompts_dir is not None:
+        set_default_prompts_dir(prompts_dir)
+    try:
+        return await _run_experiment_body(
+            config_path=config_path,
+            briefs_dir=briefs_dir,
+            output_base=output_base,
+            conditions=conditions,
+            models=models,
+            repetitions=repetitions,
+            enable_restatement_probe=enable_restatement_probe,
+            brief_reinjection_ids=brief_reinjection_ids,
+            concurrency=concurrency,
+            skip_scoring=skip_scoring,
+            max_budget=max_budget,
+            prompts_dir=prompts_dir,
+            rubrics_path=rubrics_path,
+            calibration_path=calibration_path,
+        )
+    finally:
+        if prompts_dir is not None:
+            set_default_prompts_dir(None)
+
+
+async def _run_experiment_body(
+    config_path: Path,
+    briefs_dir: Path,
+    output_base: Path,
+    conditions: list[str] | None,
+    models: list[str] | None,
+    repetitions: int | None,
+    enable_restatement_probe: bool,
+    brief_reinjection_ids: list[str] | None,
+    concurrency: int,
+    skip_scoring: bool,
+    max_budget: float | None,
+    prompts_dir: Path | None,
+    rubrics_path: Path | None,
+    calibration_path: Path | None,
+) -> dict[str, Any]:
+    """Body of run_experiment. See run_experiment for the arguments."""
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -99,7 +152,8 @@ async def run_experiment(
 
     # Create shared runners (one per condition) so rate limiters accumulate state
     shared_runners = {
-        cond: CONDITION_RUNNERS[cond](config_path) for cond in conditions
+        cond: CONDITION_RUNNERS[cond](config_path, prompts_dir=prompts_dir)
+        for cond in conditions
     }
 
     def _find_existing_transcript(
@@ -118,10 +172,7 @@ async def run_experiment(
                                 and meta.get("condition") == condition
                                 and meta.get("model_id") == model_id
                                 and meta.get("repetition") == rep):
-                            return Transcript(
-                                metadata=RunMetadata(**meta),
-                                messages=[Message(**m) for m in entry["messages"]],
-                            )
+                            return Transcript.from_dict(entry)
             except Exception:
                 continue
         return None
@@ -195,13 +246,23 @@ async def run_experiment(
 
     # Phase B: Judge scoring
     logger.info("Starting judge scoring")
-    judge = JudgePipeline(config_path)
+    judge = JudgePipeline(
+        config_path,
+        prompts_dir=prompts_dir,
+        rubrics_path=rubrics_path,
+        calibration_path=calibration_path,
+    )
     judge_scores = await judge.score_all(all_transcripts, briefs, scores_dir, concurrency)
     logger.info(f"Judge scored {len(judge_scores)} transcripts")
 
     # Phase C: Fresh-auditor evaluation
     logger.info("Starting auditor evaluation")
-    auditor = AuditorPipeline(config_path)
+    auditor = AuditorPipeline(
+        config_path,
+        prompts_dir=prompts_dir,
+        rubrics_path=rubrics_path,
+        calibration_path=calibration_path,
+    )
     auditor_scores = await auditor.audit_all(all_transcripts, briefs, scores_dir, concurrency)
     logger.info(f"Auditor scored {len(auditor_scores)} transcripts")
 
@@ -278,6 +339,19 @@ def main():
         "--max-budget", type=float, default=None,
         help="Maximum budget in USD (default: from config)",
     )
+    parser.add_argument(
+        "--prompts-dir", type=Path, default=None,
+        help="Directory of Jinja2 prompt templates (default: drift_bench/prompts). "
+             "Templates missing there fall back to the default directory.",
+    )
+    parser.add_argument(
+        "--rubrics", type=Path, default=None,
+        help="Rubric YAML for judge and auditor (default: drift_bench/judges/rubrics.yaml)",
+    )
+    parser.add_argument(
+        "--calibration", type=Path, default=None,
+        help="Calibration YAML for judge and auditor (default: drift_bench/judges/calibration.yaml)",
+    )
 
     args = parser.parse_args()
 
@@ -293,6 +367,9 @@ def main():
         concurrency=args.concurrency,
         skip_scoring=args.skip_scoring,
         max_budget=args.max_budget,
+        prompts_dir=args.prompts_dir,
+        rubrics_path=args.rubrics,
+        calibration_path=args.calibration,
     ))
 
 

@@ -1,0 +1,63 @@
+You are grading a restatement probe. During a multi-turn research-design conversation an assistant was asked:
+
+"Before proceeding, please reproduce the following from the original brief exactly: 1. The original research objective 2. All hard constraints 3. All banned moves. Do not elaborate or interpret. Just reproduce them verbatim."
+
+Your job is to decide, item by item, whether the assistant's response reproduced each item of the original brief. Judge only what is written in the response. Do not use outside knowledge. Do not reward a plausible paraphrase that changes a number, a threshold, a unit, a direction, a scope or a named entity.
+
+## Labels
+
+Give every item exactly one label:
+
+- `exact`: the response reproduces the item verbatim, or with only trivial differences: capitalisation, punctuation, list markers, articles ("a", "the"), singular versus plural, or whitespace. Every number, unit, threshold, named entity, qualifier and exception is identical.
+- `loose`: the response carries the full meaning of the item, with every number, threshold, unit, named entity, qualifier and exception preserved, but the wording is paraphrased, reordered, shortened, merged with another item, or has minor words added or dropped.
+- `wrong`: the response contains a version of the item whose meaning differs: a different number, threshold, unit, range, direction, scope or entity; a dropped or added qualifier or exception; a constraint restated as a recommendation; a banned move presented as allowed; an item weakened or strengthened.
+- `missing`: the item does not appear in the response in any form. Use `missing` when the response is cut off before the item, or when the response lists something else in its place.
+
+If an item is partly reproduced and the reproduced part changes or omits a material element, label it `wrong`, not `loose`. If you are torn between `exact` and `loose`, choose `loose`.
+
+For every item quote the shortest span of the response that supports your label, copied character for character. For `missing`, leave the evidence empty.
+
+## Original brief
+
+Objective:
+{{ objective }}
+
+Hard constraints:
+{% for c in hard_constraints %}
+{{ loop.index }}. {{ c }}
+{% endfor %}
+
+Banned moves:
+{% for b in banned_moves %}
+{{ loop.index }}. {{ b }}
+{% endfor %}
+
+## Assistant's probe response
+
+<probe_response>
+{{ probe_response }}
+</probe_response>
+
+## Output
+
+Return one JSON object and nothing else. No code fence, no commentary. Use exactly this shape:
+
+{
+  "objective": {"label": "<exact|loose|wrong|missing>", "evidence": "<quote or empty>"},
+  "hard_constraints": [
+{% for c in hard_constraints %}
+    {"index": {{ loop.index }}, "label": "<exact|loose|wrong|missing>", "evidence": "<quote or empty>"}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+  ],
+  "banned_moves": [
+{% for b in banned_moves %}
+    {"index": {{ loop.index }}, "label": "<exact|loose|wrong|missing>", "evidence": "<quote or empty>"}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+  ],
+  "extra_items": ["<any hard constraint or banned move the response lists that is not in the brief, quoted; empty list if none>"],
+  "response_cut_off": <true if the response ends mid-sentence or mid-list, else false>
+}
+
+The `hard_constraints` array must have exactly {{ hard_constraints | length }} entries and the `banned_moves` array exactly {{ banned_moves | length }} entries, in the brief's order.
