@@ -7,8 +7,11 @@
 #   bash scripts/reproduce.sh --full       # full pipeline incl. subjects + judges (costs API)
 #
 # `--hf` is the path reviewers care about: it pulls the HF dataset, symlinks
-# it into the canonical local paths, runs aggregation + analysis, and emits
-# every CSV / parquet / figure the paper cites.
+# it into the canonical local paths, runs aggregation + analysis, emits every
+# CSV / parquet / figure the paper cites, and checks the regenerated numbers
+# against the snapshot's MANIFEST.txt (scripts/verify_reproduction.py).
+# Extra arguments after --hf go to scripts/fetch_from_hf.py
+# (e.g. `--hf --revision main`).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,6 +19,9 @@ cd "$ROOT"
 
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || PY=python
+# litellm otherwise downloads its model map on import; the bundled map keeps the
+# context windows used by tokens_context fixed for the pinned litellm version.
+export LITELLM_LOCAL_MODEL_COST_MAP="${LITELLM_LOCAL_MODEL_COST_MAP:-True}"
 
 run_aggregate() {
   echo "==> aggregating per-run JSONL -> parquet (commercial + open-weight)"
@@ -51,7 +57,7 @@ print(f'  combined: {len(combined)} rows -> {combined_out}')
 run_analysis() {
   echo "==> running priority-list analyses (items 1-6)"
   $PY -m drift_bench.run_analysis --items all
-  echo "==> regenerating figures"
+  echo "==> regenerating submission-era figures (drift_bench/data/figures)"
   $PY -c "
 from pathlib import Path
 from drift_bench.analysis.figures import generate_all_figures
@@ -60,12 +66,31 @@ generate_all_figures(
     Path('drift_bench/data/figures'),
 )
 "
+  echo "==> regenerating the six camera-ready figures (figures/)"
+  $PY -m drift_bench.analysis.camera_ready.figures_cr
+  # sensitivity checks its cells against the fig_sensitivity sidecar, which
+  # exists only now; re-run it so its provenance records that check.
+  echo "==> re-running sensitivity against the new figure sidecar"
+  $PY -m drift_bench.analysis.camera_ready.sensitivity > /dev/null
   echo "==> regenerating release manifest + paper macros"
   # release_manifest also regenerates drift_bench/data/camera_ready/analysis/cr_macros.tex
   # (drift_bench.analysis.camera_ready.macros) and makes release_macros.tex \input it.
   $PY -m drift_bench.analysis.release_manifest \
     --output drift_bench/data/analysis/release_manifest.json \
     --tex-output drift_bench/data/analysis/release_macros.tex
+}
+
+# The run overwrites the released files through the symlinks, so keep a copy
+# of each checked file (confirmed against MANIFEST.txt) for the cell-level
+# comparison when a hash differs.
+run_save_reference() {
+  echo "==> saving the released copies of the checked files"
+  $PY scripts/verify_reproduction.py --save-reference drift_bench/data/released_reference "$@"
+}
+
+run_verify() {
+  echo "==> comparing the regenerated numbers with the snapshot's MANIFEST.txt"
+  $PY scripts/verify_reproduction.py --since "$START" "$@"
 }
 
 run_full() {
@@ -75,17 +100,24 @@ run_full() {
 
 case "${1:-}" in
   --hf)
+    shift
     echo "==> fetching DriftBench HF dataset"
-    $PY scripts/fetch_from_hf.py
+    $PY scripts/fetch_from_hf.py "$@"
+    run_save_reference
+    START="$($PY -c 'import time; print(time.time())')"
     run_aggregate
     run_analysis
+    run_verify
     ;;
   --aggregate)
     run_aggregate
     ;;
   --analyze|--analysis)
+    run_save_reference --allow-missing-manifest
+    START="$($PY -c 'import time; print(time.time())')"
     run_aggregate
     run_analysis
+    run_verify --allow-missing-manifest
     ;;
   --full)
     run_full
@@ -97,9 +129,10 @@ case "${1:-}" in
 usage: $0 <mode>
 
 modes:
-  --hf         fetch HF snapshot, symlink, aggregate, run analysis (no API)
+  --hf         fetch HF snapshot, symlink, aggregate, run analysis + figures,
+               verify against MANIFEST.txt (no API); extra args go to fetch_from_hf.py
   --aggregate  re-aggregate per-run JSONL into parquet
-  --analyze    aggregate + run all priority-list analyses + figures
+  --analyze    aggregate + run all priority-list analyses + figures + verify
   --full       run subjects/judges/auditor (API-costly), then aggregate+analyze
 EOF
     [ -z "${1:-}" ] && exit 2 || exit 0

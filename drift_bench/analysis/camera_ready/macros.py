@@ -1903,12 +1903,15 @@ def _sonnet_truncation_specs() -> list[MacroSpec]:
     ``\\crSonnetTruncatedFrac``). ``\\crSonnetFinalCap{Clean,Pub}`` (+ ``Frac``,
     ``Pct``): the final assistant message at the cap. Per condition:
     ``\\crSonnetTruncatedClean<Condition>Frac`` and ``\\crSonnetFinalCapClean<Condition>Frac``.
+    Gemini Pro at its logged cap (4,092 tokens): ``\\crGeminiProCapClean`` (+ ``Frac``),
+    ``\\crGeminiProFinalCapClean`` and ``\\crGeminiProFinalCapClean<Condition>``.
     """
     csv = "sonnet_truncation.csv"
     specs: list[MacroSpec] = []
 
-    def _block(base: str, sample: str, rule: str, cond: str, parts: tuple[str, ...]) -> list[MacroSpec]:
-        w = {"sample": sample, "rule": rule, "condition": cond}
+    def _block(base: str, sample: str, rule: str, cond: str, parts: tuple[str, ...],
+               model: str = "anthropic/claude-sonnet-4-6") -> list[MacroSpec]:
+        w = {"sample": sample, "model_id": model, "rule": rule, "condition": cond}
         made = {
             "": MacroSpec(_name(base), csv, w, "n_truncated", "int", required=False),
             "Frac": MacroSpec(_name(base, "Frac"), csv, w, ("n_truncated", "n_runs"), "frac", required=False),
@@ -1925,6 +1928,10 @@ def _sonnet_truncation_specs() -> list[MacroSpec]:
     for cond, clabel in CONDITION_LABELS.items():
         specs += _block("SonnetTruncatedClean" + clabel, "clean", "any_turn", cond, ("Frac",))
         specs += _block("SonnetFinalCapClean" + clabel, "clean", "final_turn", cond, ("Frac",))
+    specs += _block("GeminiProCapClean", "clean", "any_turn", "all_main", ("", "Frac"), model="gemini/gemini-3.1-pro-preview")
+    specs += _block("GeminiProFinalCapClean", "clean", "final_turn", "all_main", ("",), model="gemini/gemini-3.1-pro-preview")
+    for cond, clabel in CONDITION_LABELS.items():
+        specs += _block("GeminiProFinalCapClean" + clabel, "clean", "final_turn", cond, ("",), model="gemini/gemini-3.1-pro-preview")
     return specs
 
 

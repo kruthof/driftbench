@@ -16,21 +16,67 @@ locally coherent but globally misaligned elaborations.
 
 ---
 
-## Reproduce the paper numbers (no API keys)
+## Reproduce the paper's numbers
+
+No API keys are needed. Use Python 3.13 and the pinned versions in
+`requirements-lock.txt` (the versions that produced the paper's numbers):
 
 ```bash
 git clone https://github.com/kruthof/driftbench DriftBench && cd DriftBench
 python3.13 -m venv .venv
-.venv/bin/pip install -e .
+.venv/bin/pip install -r requirements-lock.txt
+.venv/bin/pip install -e . --no-deps
 
+export HF_TOKEN=hf_...   # optional: a free Hugging Face read token avoids rate limits
 bash scripts/reproduce.sh --hf
 ```
+
+The run downloads about 19,000 files and then takes a few minutes (about 5 on
+a laptop). Without `HF_TOKEN` the download can stop with HTTP 429 (rate limit);
+set the token and re-run, and the download resumes where it stopped. The
+fetch step checks the download against the snapshot's `MANIFEST.txt` and stops
+with an error if listed files are missing. The
+download is the Hugging Face tag `camera-ready`, the exact snapshot the paper
+used (`bash scripts/reproduce.sh --hf --revision main` follows the latest
+commit instead).
+
+The run ends by comparing every regenerated file that carries the paper's
+numbers with the snapshot's `MANIFEST.txt` (`scripts/verify_reproduction.py`).
+Expected final output:
+
+```
+verify_reproduction: regenerated files under drift_bench/data vs drift_bench/data/hf_cache/MANIFEST.txt (… entries)
+  cr_macros.json             1/1 identical
+  camera-ready CSVs          75/75 identical
+  release_macros.tex         1/1 identical
+  figures (numbers drawn)    6/6 identical
+  figures (PDF bytes)        6/6 identical
+  note: camera_ready/analysis/swe_verify_results.csv is compared as shipped (swe_verify executes model-written code and is run by hand)
+verify_reproduction: identical. Every checked file matches the release byte for byte.
+```
+
+`cr_macros.json` holds every `\cr...` macro value of the paper. The run is
+byte-identical on macOS arm64; on other platforms the last floating-point
+digits of intermediate CSV values may differ, and every printed number is
+identical (the verify script checks this). There a file whose hash differs is
+compared with the released copy, which `reproduce.sh` saves before the run: it
+passes when the shape, the header and every text cell are equal, every number
+is within a relative 1e-9, and every printed macro value is equal. The run
+then ends with "identical at printed precision (last float digits differ)"
+and exits 0. Anything else is listed cell by cell and exits 1. The figure PDFs
+embed the font STIX Two Text, which ships with macOS; elsewhere their bytes
+differ and the script only warns, because the numbers each figure draws are
+checked separately.
 
 `--hf` mode pulls the Hugging Face snapshot (`driftbench/DriftBench`), symlinks
 it at the canonical local paths the analysis pipeline expects, re-aggregates
 the scores, runs analysis items 1 to 6 (item 6 is every camera-ready module),
-regenerates the submission-era figures, and rewrites the LaTeX macros file the
-paper `\input{}`s. No API calls are made.
+regenerates the submission-era figures and the six camera-ready figures
+(`figures/`), rewrites the LaTeX macros file the paper `\input{}`s, and runs
+the check above. No API calls are made. Because of the symlinks, the
+regenerated files overwrite the downloaded copies; `MANIFEST.txt` keeps the
+released hashes, and the run first saves the released copies of the checked
+files to `drift_bench/data/released_reference/`.
 
 The camera-ready numbers are `\cr...` macros (values kept from the submitted
 version or the rebuttal are labelled so in the paper). The macros are
@@ -53,9 +99,12 @@ python -m drift_bench.analysis.camera_ready.macros --list | grep -i kbv
 Item 6 imports every module in `drift_bench/analysis/camera_ready/` that has a
 `run()` function and runs them in alphabetical order, with `e7_summary` and
 `macros` last. A failing module is reported and does not stop the others. It
-makes no API calls (litellm fetches its public cost map on import; set
-`LITELLM_LOCAL_MODEL_COST_MAP=True` to stay offline). Two modules are skipped
-on purpose and must be run by hand:
+makes no API calls. `reproduce.sh` sets `LITELLM_LOCAL_MODEL_COST_MAP=True`, so litellm
+uses the model map bundled with the pinned version instead of downloading the
+current one (the token analysis reads context windows from it); set it yourself when
+running item 6 by hand. Two modules are skipped
+on purpose. `reproduce.sh` runs `figures_cr` after item 6; the SWE harness must
+be run by hand:
 
 ```bash
 # The six camera-ready figures (vector PDFs plus provenance sidecars in figures/)
@@ -75,7 +124,7 @@ Other reproduction modes:
 
 ```bash
 bash scripts/reproduce.sh --aggregate   # re-aggregate locally-staged JSONL into parquet
-bash scripts/reproduce.sh --analyze     # aggregate + run analysis items 1-6 + figures + macros
+bash scripts/reproduce.sh --analyze     # aggregate + run analysis items 1-6 + figures + macros + check
 bash scripts/reproduce.sh --full        # full pipeline incl. subjects/judges (uses your API quota)
 ```
 
@@ -292,10 +341,14 @@ drift_bench/
 figures/              camera-ready figure PDFs + provenance, written by
                       figures_cr.py (created on first run)
 
+requirements-lock.txt pinned dependency versions that produced the paper's numbers
+
 scripts/
   build_dataset_release.py   stage local data → Dataset/ for HF push
-  fetch_from_hf.py           HF snapshot → symlinks at canonical local paths
+  fetch_from_hf.py           HF snapshot (tag camera-ready) → symlinks at canonical local paths
   reproduce.sh               --hf | --aggregate | --analyze | --full
+  verify_reproduction.py     regenerated numbers vs the snapshot's MANIFEST.txt
+  figures_reference.json     reference hashes of the six camera-ready figures
   evaluate_model.py          score a new subject model on DriftBench
 
 docs/
@@ -382,13 +435,22 @@ grep -rlF "$(pwd)/" Dataset/ | wc -l                     # MUST be 0 (no local r
 # 3. Push to HF (one-time setup: pip install huggingface-hub && huggingface-cli login)
 huggingface-cli upload-large-folder \
   --repo-type=dataset driftbench/DriftBench Dataset/
+# Then point the HF tag `camera-ready` at the commit the paper's numbers come
+# from. scripts/fetch_from_hf.py downloads that tag by default and does not
+# fall back to main when it is missing. Add --revision <commit> to tag an
+# earlier commit than the latest:
+hf repos tag create driftbench/DriftBench camera-ready --repo-type dataset
 
 # 4. Verify the loop in a fresh tmpdir
 mkdir /tmp/repro && cd /tmp/repro
-git clone https://github.com/kruthof/driftbench . && python -m venv .venv
-.venv/bin/pip install -e .
-bash scripts/reproduce.sh --hf
+git clone https://github.com/kruthof/driftbench . && python3.13 -m venv .venv
+.venv/bin/pip install -r requirements-lock.txt && .venv/bin/pip install -e . --no-deps
+bash scripts/reproduce.sh --hf    # must exit 0 (ends with "identical" on macOS arm64)
 ```
+
+After a dependency change, regenerate `requirements-lock.txt` with the command
+in its header. After a figure change, rewrite the reference hashes with
+`python scripts/verify_reproduction.py --write-figure-reference`.
 
 The build script enforces (and fails the build on):
 

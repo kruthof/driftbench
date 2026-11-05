@@ -2,6 +2,42 @@
 
 All corrections to the released DriftBench artifact are recorded here.
 
+## 2026-11-05 — full corrections list added to the release; pinned and checked reproduction
+
+- `camera_ready/analysis/corrections_full.tex` is the full corrections list the paper's
+  appendix was shortened from; `drift_bench/analysis/camera_ready/corrections_full.py`
+  renders it with the macro values to `corrections_full.md`, and
+  `tests/test_cr_corrections_full.py` checks the render.
+- Reproduction from a fresh clone. `requirements-lock.txt` pins the dependency
+  versions that produced the paper's numbers (Python 3.13). `scripts/fetch_from_hf.py`
+  downloads the Hugging Face tag `camera-ready` by default (`--revision main` follows
+  the latest commit) and answers an HTTP 429 or network error with one line: set
+  `HF_TOKEN` and re-run; the download resumes. It also checks the download against
+  `MANIFEST.txt` and stops if listed files are missing. `scripts/reproduce.sh --hf` and
+  `--analyze` now also draw the six camera-ready figures (`figures_cr`), re-run
+  `sensitivity` so its provenance records the check against the new figure sidecar,
+  and end with the new `scripts/verify_reproduction.py`. That script compares
+  `cr_macros.json`, every CSV in `camera_ready/analysis/` and `release_macros.tex`
+  with the snapshot's `MANIFEST.txt`, and the figures with
+  `scripts/figures_reference.json`. The run is byte-identical on macOS arm64; on
+  other platforms the last floating-point digits of intermediate CSV values may
+  differ, and every printed number is identical. So a file whose hash differs is
+  compared with the released copy that `reproduce.sh` saves before the run
+  (`--save-reference`): it passes "identical at printed precision" when shape,
+  header and text cells are equal, numbers are within rtol 1e-9 and every printed
+  macro value is equal; otherwise the script lists the differing cells and exits 1.
+  `tests/test_verify_reproduction.py` covers it. `reproduce.sh` sets
+  `LITELLM_LOCAL_MODEL_COST_MAP=True`, so litellm uses the model map bundled with the
+  pinned version instead of downloading the current one (`tokens_context` reads context
+  windows from it; the Llama 3.3 70B window then comes from the fallback table, with the
+  same value). No number changes.
+- `camera_ready/analysis/sonnet_truncation.csv` also holds Gemini 3.1 Pro rows. Gemini Pro is the
+  only other subject that reaches the 4,096-token output cap: 48 of its 303 clean runs have a
+  message at 4,092 tokens (Gemini's logged count at the cap, as 1,020 at the 1,024-token probe
+  cap), and its judged final response is capped in 2 single-shot runs. An earlier camera-ready
+  draft said that no other model reached the cap; the paper now gives these counts (macros `\crGeminiProCap...`). The
+  Sonnet rows and every earlier macro value are unchanged.
+
 ## 2026-10-27 — camera-ready release: SWE pilot provenance, LLM-labelled hand-check, remaining analysis modules, public names
 
 These items complete the 2026-10-26 entry. Every table named below sits under

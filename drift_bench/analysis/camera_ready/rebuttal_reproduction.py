@@ -1,8 +1,8 @@
 """X16: reproduce the posted rebuttal values from the released data.
 
 The author posted three rebuttals on 26 July and a two-part discussion reply on 31 July.
-The camera-ready corrections list (Appendix ``app:corrections``) tags the values
-in them ``told`` or ``regenerated``. This module recomputes each posted number
+The full corrections list (``camera_ready/analysis/corrections_full.md``) tags the
+values in them ``told`` or ``regenerated``. This module recomputes each posted number
 under the definition and sample the rebuttal used, from files on disk only. It
 then says whether the result matches the posted value at the posted precision.
 

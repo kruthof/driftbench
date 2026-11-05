@@ -1,0 +1,30 @@
+{
+  "note": "SHA-256 of the six camera-ready figures and of the numbers_drawn list of each provenance sidecar (canonical JSON: sorted keys, no spaces). Written by scripts/verify_reproduction.py --write-figure-reference.",
+  "font": "STIX Two Text",
+  "figures": {
+    "fig_complexity_vs_tokens": {
+      "pdf_sha256": "50a690640207e790cd8f2666bcac820f2dda80dc76c2f70a174bac9b637ab6a9",
+      "numbers_drawn_sha256": "8f3b0cbcffe199507e4edf9c2bcb60e7f47fb18b600c6d9590353420eb525d09"
+    },
+    "fig_drift_checkpoint": {
+      "pdf_sha256": "ac1e8a041879d979d448279170b7c5daa6b4701b3450a70757efef11b860fb96",
+      "numbers_drawn_sha256": "7471eeeb5e440341a66ee29bf85ce5d38c2b6def623a578cb436fe1ec2f57f81"
+    },
+    "fig_drift_classification": {
+      "pdf_sha256": "26a7b578678e2d7da28f8752155d0c41b2fb36eae96cb78f83afdd9d9774ca74",
+      "numbers_drawn_sha256": "d52b34af28afc7aa58fb09dd434cfe9a8508e4d829ef77548660c523cb98b8e7"
+    },
+    "fig_kbv_by_judge_arm": {
+      "pdf_sha256": "81dd145c5401588571ebf12e27b75eb7fa5b32202413d499f004ac471274a37c",
+      "numbers_drawn_sha256": "1d34004bd99d25bd399f1eaf1800359af158ff07f279dca14fb8e681b285b981"
+    },
+    "fig_sensitivity": {
+      "pdf_sha256": "efed35ccc18d1184b4c79f3b4b574e6e39d2fb2cdede2919ce63989dee87fca4",
+      "numbers_drawn_sha256": "7a3766bacec9e3b9e39ecf2e6b798181b56393827435e1c792656f75f65be644"
+    },
+    "fig_trajectories": {
+      "pdf_sha256": "1c33888bb7476e03533ce662682a0859e2f8eea95c561c388d4353388764f124",
+      "numbers_drawn_sha256": "196eeb05a57c3add2c3287e46a42522f5741140dd963067ac182a45a33ab3ba8"
+    }
+  }
+}

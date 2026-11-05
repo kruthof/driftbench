@@ -1275,6 +1275,11 @@ def test_sonnet_truncation_group(tmp_path: Path) -> None:
                 "n_untruncated": n - k, "share_truncated": k / n, "ci_low": lo, "ci_high": hi}
 
     _write(d / "sonnet_truncation.csv", [
+        # Gemini Pro rows share sample/rule/condition with the Sonnet rows; model_id tells them apart; listed first, so a
+        # Sonnet filter without model_id would resolve to them.
+        {**row("clean", "any_turn", "all_main", 303, 48, 0.12, 0.20), "model_id": "gemini/gemini-3.1-pro-preview"},
+        {**row("clean", "final_turn", "all_main", 303, 2, 0.0, 0.02), "model_id": "gemini/gemini-3.1-pro-preview"},
+        {**row("clean", "final_turn", "single_shot", 75, 2, 0.0, 0.09), "model_id": "gemini/gemini-3.1-pro-preview"},
         row("clean", "any_turn", "all_main", 304, 221, 0.674293, 0.773989),
         row("as_published", "any_turn", "all_main", 315, 226, 0.665351, 0.764329),
         row("clean", "final_turn", "all_main", 304, 125, 0.357316, 0.467269),
@@ -1283,7 +1288,7 @@ def test_sonnet_truncation_group(tmp_path: Path) -> None:
         row("clean", "final_turn", "multi_turn_pressure", 76, 50, 0.545959, 0.754637),
     ])
     specs = m._sonnet_truncation_specs()
-    assert len(specs) == 5 + 1 + 3 + 3 + 4 * 2
+    assert len(specs) == 5 + 1 + 3 + 3 + 4 * 2 + 2 + 1 + 4
     v = _values(tmp_path, d, specs)
     expected = {
         "\\crSonnetTruncatedClean": "221",
@@ -1297,6 +1302,9 @@ def test_sonnet_truncation_group(tmp_path: Path) -> None:
         "\\crSonnetFinalCapPubPct": "40.3",
         "\\crSonnetTruncatedCleanPressureFrac": "72/76",
         "\\crSonnetFinalCapCleanPressureFrac": "50/76",
+        "\\crGeminiProCapCleanFrac": "48/303",
+        "\\crGeminiProFinalCapClean": "2",
+        "\\crGeminiProFinalCapCleanSingleShot": "2",
     }
     for name, value in expected.items():
         assert v.get(name) == value, (name, v.get(name))

@@ -17,6 +17,14 @@ Usage (from repo root):
     python scripts/fetch_from_hf.py --repo-id <USER>/DriftBench  # a fork or mirror
     # or set DRIFTBENCH_HF_REPO instead.
 
+The default revision is the tag `camera-ready`: the exact snapshot the paper's
+numbers come from. `--revision main` follows the latest commit instead.
+
+The snapshot has about 19,000 files. Anonymous downloads can hit the Hugging
+Face rate limit (HTTP 429). Set HF_TOKEN to a free read token
+(https://huggingface.co/settings/tokens) and re-run; the download resumes and
+skips the files it already has.
+
 Pass --no-fetch to skip download (assumes the cache dir is already populated).
 """
 from __future__ import annotations
@@ -28,6 +36,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HF_CACHE_DIR = ROOT / "drift_bench" / "data" / "hf_cache"
+# The HF tag on the dataset commit the paper's numbers come from.
+DEFAULT_REVISION = "camera-ready"
+TOKEN_HINT = (
+    "Set HF_TOKEN to a free Hugging Face read token "
+    "(https://huggingface.co/settings/tokens) and re-run; the download resumes."
+)
 
 # Inverse of build_dataset_release.COPY_PLAN: (HF subpath, local repo path).
 # Keep these two lists strictly inverse — see the note in the build script.
@@ -103,7 +117,65 @@ def link(src: Path, dst: Path) -> bool:
     return True
 
 
-def main() -> int:
+def _shown(path: Path) -> str:
+    """`path` relative to the repository root when it lies inside it."""
+    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
+
+
+def download_error_message(exc: BaseException, repo_id: str, revision: str | None) -> str | None:
+    """One line that tells the user what to do after a failed download.
+
+    Returns None for errors that are not HTTP or network errors, so that bugs
+    keep their traceback.
+    """
+    from huggingface_hub.utils import (
+        HfHubHTTPError,
+        RepositoryNotFoundError,
+        RevisionNotFoundError,
+    )
+
+    if isinstance(exc, RevisionNotFoundError):
+        return (f"ERROR: revision '{revision}' not found on {repo_id}. "
+                "Pass --revision main for the latest commit.")
+    if isinstance(exc, RepositoryNotFoundError):
+        return f"ERROR: dataset {repo_id} not found. Check --repo-id. {TOKEN_HINT}"
+    module = type(exc).__module__.split(".")[0]
+    if not (isinstance(exc, (HfHubHTTPError, OSError))
+            or module in ("httpx", "httpcore", "requests", "urllib3")):
+        return None
+    # The HTTP status can sit on a chained error: a 429 on the repo lookup
+    # surfaces as LocalEntryNotFoundError whose __cause__ holds the response.
+    status = None
+    for err in (exc, exc.__cause__, exc.__context__):
+        status = getattr(getattr(err, "response", None), "status_code", None)
+        if status:
+            break
+    what = f"HTTP {status}" if status else type(exc).__name__
+    if status == 429:
+        what = "HTTP 429, rate limit"
+    return f"ERROR: download stopped ({what}). {TOKEN_HINT}"
+
+
+def incomplete_download_message(cache: Path) -> str | None:
+    """One line when files listed in MANIFEST.txt are absent from `cache`, else None.
+
+    snapshot_download can return a partial local_dir without raising when the
+    Hub answers 429 or cannot be reached, so the files are checked here.
+    """
+    manifest = cache / "MANIFEST.txt"
+    if not manifest.is_file():
+        return f"ERROR: download incomplete (no MANIFEST.txt). {TOKEN_HINT}"
+    listed = [line.split(maxsplit=1)[1] for line in manifest.read_text(encoding="utf-8").splitlines()
+              if line.strip()]
+    if not listed:
+        return f"ERROR: download incomplete (MANIFEST.txt lists no files). {TOKEN_HINT}"
+    absent = sum(not (cache / rel).is_file() for rel in listed)
+    if not absent:
+        return None
+    return f"ERROR: download incomplete ({absent:,} of {len(listed):,} listed files missing). {TOKEN_HINT}"
+
+
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument(
         "--repo-id",
@@ -113,11 +185,16 @@ def main() -> int:
     )
     p.add_argument("--cache-dir", default=str(HF_CACHE_DIR),
                    help=f"Where to download the HF snapshot (default: {HF_CACHE_DIR.relative_to(ROOT)})")
-    p.add_argument("--revision", default=None,
-                   help="HF revision/tag/branch (default: latest main)")
+    p.add_argument("--revision", default=DEFAULT_REVISION,
+                   help=f"HF revision/tag/branch (default: the tag {DEFAULT_REVISION}, "
+                        "the snapshot of the paper; 'main' follows the latest commit)")
     p.add_argument("--no-fetch", action="store_true",
                    help="Skip the HF download; just (re)link from cache-dir")
-    args = p.parse_args()
+    return p
+
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     cache = Path(args.cache_dir).resolve()
     cache.mkdir(parents=True, exist_ok=True)
@@ -137,13 +214,24 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
-        print(f"Downloading {args.repo_id} -> {cache.relative_to(ROOT)}")
-        snapshot_download(
-            repo_id=args.repo_id,
-            repo_type="dataset",
-            revision=args.revision,
-            local_dir=str(cache),
-        )
+        print(f"Downloading {args.repo_id} (revision {args.revision}) -> {_shown(cache)}")
+        try:
+            snapshot_download(
+                repo_id=args.repo_id,
+                repo_type="dataset",
+                revision=args.revision,
+                local_dir=str(cache),
+            )
+        except Exception as exc:  # noqa: BLE001 - HTTP and network errors get one line
+            message = download_error_message(exc, args.repo_id, args.revision)
+            if message is None:
+                raise
+            print(message, file=sys.stderr)
+            return 1
+        message = incomplete_download_message(cache)
+        if message is not None:
+            print(message, file=sys.stderr)
+            return 1
 
     n_linked = n_already = n_missing = 0
     for hf_rel, local_rel in PATH_MAP:

@@ -70,33 +70,40 @@ def test_run_on_synthetic_tree_drops_stray_runs_from_clean_and_writes_only_to_ou
     root = tmp_path / "data"
     (root / "aggregated").mkdir(parents=True)
     runs = [
-        # run_id, brief, condition, judge ts, assistant token counts (non-probe, in order)
-        ("a", "b1", MTP, GOOD_TS, [500, 4096, 800]),    # any-turn capped, final not
-        ("b", "b2", MTP, GOOD_TS, [500, 800, 4096]),    # final capped
-        ("c", "b1", MTP, STRAY_TS, [4096, 4096, 4096]),  # stray
-        ("d", "b1", SS, GOOD_TS, [4095]),               # one short of the cap
+        # run_id, brief, condition, judge ts, assistant token counts (non-probe, in order), model
+        ("a", "b1", MTP, GOOD_TS, [500, 4096, 800], SONNET),    # any-turn capped, final not
+        ("b", "b2", MTP, GOOD_TS, [500, 800, 4096], SONNET),    # final capped
+        ("c", "b1", MTP, STRAY_TS, [4096, 4096, 4096], SONNET),  # stray
+        ("d", "b1", SS, GOOD_TS, [4095], SONNET),               # one short of the cap
+        ("g1", "b1", MTP, GOOD_TS, [500, 4092, 800], st.GEMINI_PRO),  # Gemini logged cap, final not
+        ("g2", "b1", SS, GOOD_TS, [4092], st.GEMINI_PRO),             # final at Gemini's logged cap
+        ("g3", "b2", SS, GOOD_TS, [4091], st.GEMINI_PRO),             # one short of it
     ]
-    pd.DataFrame([{"run_id": r[0], "brief_id": r[1], "model_id": SONNET, "condition": r[2], "j_constraint_adherence": 3}
+    pd.DataFrame([{"run_id": r[0], "brief_id": r[1], "model_id": r[5], "condition": r[2], "j_constraint_adherence": 3}
                   for r in runs]).to_parquet(root / "aggregated" / "all_scores.parquet")
-    for run_id, brief, cond, ts, toks in runs:
-        _write_json(root / "scores" / f"judge_{run_id}.jsonl", {"run_id": run_id, "model_id": SONNET, "timestamp": ts})
+    for run_id, brief, cond, ts, toks, model in runs:
+        _write_json(root / "scores" / f"judge_{run_id}.jsonl", {"run_id": run_id, "model_id": model, "timestamp": ts})
         msgs = []
         for tok in toks:
             msgs += [{"role": "user", "content": "u", "token_count": 1, "is_probe": False},
                      {"role": "assistant", "content": "a", "token_count": tok, "is_probe": False},
                      {"role": "assistant", "content": "probe", "token_count": 4096, "is_probe": True}]  # probes never count
         _write_json(root / "transcripts" / f"{run_id}.jsonl",
-                    {"metadata": {"run_id": run_id, "brief_id": brief, "model_id": SONNET, "condition": cond}, "messages": msgs})
+                    {"metadata": {"run_id": run_id, "brief_id": brief, "model_id": model, "condition": cond}, "messages": msgs})
     before = {p for p in root.rglob("*") if p.is_file()}
     out = tmp_path / "out"
     t = st.run(root, out)["sonnet_truncation"]
     assert {p for p in root.rglob("*") if p.is_file()} == before
     assert {p.name for p in out.iterdir()} == {"sonnet_truncation.csv", "sonnet_truncation.csv.provenance.json"}
-    sel = t.set_index(["sample", "rule", "condition"])
+    sel = t[t["model_id"] == SONNET].set_index(["sample", "rule", "condition"])
     assert (sel.loc[("as_published", "any_turn", st.ALL_MAIN), ["n_truncated", "n_runs"]] == [3, 4]).all()
     assert (sel.loc[("clean", "any_turn", st.ALL_MAIN), ["n_truncated", "n_runs"]] == [2, 3]).all()
     assert (sel.loc[("clean", "final_turn", st.ALL_MAIN), ["n_truncated", "n_runs"]] == [1, 3]).all()
     assert (sel.loc[("as_published", "final_turn", MTP), ["n_truncated", "n_runs"]] == [2, 3]).all()
+    pro = t[t["model_id"] == st.GEMINI_PRO].set_index(["sample", "rule", "condition"])
+    assert (pro.loc[("clean", "any_turn", st.ALL_MAIN), ["n_truncated", "n_runs"]] == [2, 3]).all()
+    assert (pro.loc[("clean", "final_turn", st.ALL_MAIN), ["n_truncated", "n_runs"]] == [1, 3]).all()
+    assert (pro.loc[("clean", "final_turn", SS), ["n_truncated", "n_runs"]] == [1, 2]).all()
     prov = json.loads((out / "sonnet_truncation.csv.provenance.json").read_text())
     assert prov["rows_out"] == len(t)
     assert prov["row_counts"]["sonnet_rows_by_sample"]["clean"]["rows_out"] == 3

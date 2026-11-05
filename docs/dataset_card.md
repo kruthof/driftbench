@@ -84,15 +84,18 @@ No API calls are needed.
 ```sh
 git clone https://github.com/kruthof/driftbench DriftBench
 cd DriftBench
-python -m venv .venv
-.venv/bin/pip install -e .
+python3.13 -m venv .venv
+.venv/bin/pip install -r requirements-lock.txt   # the versions behind the paper's numbers
+.venv/bin/pip install -e . --no-deps
 
-bash scripts/reproduce.sh --hf  # pulls driftbench/DriftBench by default
+export HF_TOKEN=hf_...           # optional: a free read token avoids rate limits
+bash scripts/reproduce.sh --hf  # pulls driftbench/DriftBench, tag camera-ready
 ```
 
 `--hf` mode:
 
-1. Pulls the HF dataset into `drift_bench/data/hf_cache/`.
+1. Pulls the HF dataset at the tag `camera-ready` into `drift_bench/data/hf_cache/`
+   and checks that every file `MANIFEST.txt` lists arrived.
 2. Symlinks each HF subdirectory at the canonical local path the analysis
    pipeline expects (`drift_bench/data/transcripts/`, `…/scores/`, etc.).
 3. Re-aggregates per-run JSONL into the unified parquet table.
@@ -100,11 +103,28 @@ bash scripts/reproduce.sh --hf  # pulls driftbench/DriftBench by default
    verbosity-controlled complexity regression, restatement probes + surface
    gap, judge validation, debiasing) and every camera-ready module (item 6;
    the macros run last).
-5. Regenerates the submission-era figures and the LaTeX macros file the paper
-   `\input{}`s.
+5. Regenerates the submission-era figures, the six camera-ready figures and the
+   LaTeX macros file the paper `\input{}`s.
+6. Compares the regenerated files that carry the paper's numbers
+   (`camera_ready/analysis/cr_macros.json`, the 75 CSVs in
+   `camera_ready/analysis/`, `analysis/release_macros.tex`) with
+   `MANIFEST.txt`, and the six figures with reference hashes in the code
+   repository, and prints "N/N identical" per group
+   (`scripts/verify_reproduction.py`). Before step 3 the run saves the released
+   copies of these files, since the regenerated files overwrite the snapshot
+   through the symlinks.
 
-The camera-ready figures are drawn by a separate command,
-`python -m drift_bench.analysis.camera_ready.figures_cr`. The repository
+The tag `camera-ready` marks the exact snapshot the paper used; `--revision main`
+(`bash scripts/reproduce.sh --hf --revision main`) follows the latest commit.
+Anonymous downloads of the about 19,000 files can hit the Hugging Face rate limit
+(HTTP 429); set `HF_TOKEN` to a free read token and re-run, and the download
+resumes. With the library versions of `requirements-lock.txt` the run is
+byte-identical on macOS arm64; on other platforms the last floating-point digits
+of intermediate CSV values may differ, and every printed number is identical
+(the verify script checks this). A file whose hash differs passes "identical at
+printed precision" when its shape, header and text cells are equal, its numbers
+are within a relative 1e-9 of the released copy and every printed macro value is
+equal; otherwise the script lists the differing cells and exits 1. The repository
 README lists every command.
 
 A full re-run from API calls (subjects → judges → auditor) is also supported
@@ -179,13 +199,17 @@ DriftBench/
 │                                   transcript_features.csv, regression_results.json,
 │                                   release_manifest.json, release_macros.tex
 │                                   (see the note below on reproduce.sh --hf)
-├── camera_ready/                   3,332 files: camera-ready experiments and
+├── camera_ready/                   3,335 files: camera-ready experiments and
 │   │                               the CSVs the camera-ready numbers derive from
-│   ├── analysis/                   154 files: 75 CSVs, each with a
+│   ├── analysis/                   157 files: 75 CSVs, each with a
 │   │                               <name>.csv.provenance.json sidecar; cr_macros.tex,
 │   │                               cr_macros.json (the paper's macros),
 │   │                               cr_macros.tex.provenance.json,
-│   │                               per_model_condition_means.tex
+│   │                               per_model_condition_means.tex;
+│   │                               corrections_full.md, the full list of
+│   │                               corrections the paper's corrections appendix
+│   │                               refers to (source corrections_full.tex,
+│   │                               with a provenance sidecar)
 │   ├── e1_crossed_judge/           Crossed judge: Opus 4.6 on Sonnet (152),
 │   │                               GPT-5.4 on the other six (908), 50-run
 │   │                               original-judge control
@@ -239,7 +263,9 @@ with equal values, and `regression_results.json` with values equal within
 2e-8 (its model summaries also carry the new run date). Every other item 1–5
 output is rewritten byte-identical. No camera-ready macro reads these files, so
 `cr_macros.tex` is unchanged. The rewritten snapshot no longer matches
-`MANIFEST.txt`.
+`MANIFEST.txt` for these files and for the provenance sidecars (they carry the
+run date); `scripts/verify_reproduction.py` checks only the files that carry the
+paper's numbers.
 
 `analysis/` holds two generations of the probe tables. `probe_accuracy.csv`
 and `final_probe_accuracy.csv` (regenerated 2026-07-26, all seven models) are
